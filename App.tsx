@@ -120,6 +120,15 @@ const App: React.FC = () => {
             setChatHistory([{ role: Role.ASSISTANT, content: msg }]);
 
             let welcomeSpeech = `here is the instructions for ${data.title}.`;
+            
+            // Highlight cooking details via voice for ALL recipes where found
+            if (data.cookingTime || data.ovenTemp) {
+                welcomeSpeech += " I found the cooking details.";
+                if (data.ovenTemp) welcomeSpeech += ` The required temperature is ${data.ovenTemp}.`;
+                if (data.cookingTime) welcomeSpeech += ` The estimated time is ${data.cookingTime}.`;
+                if (data.expiryDate && imageData) welcomeSpeech += ` Also, I noticed an expiry date of ${data.expiryDate}.`;
+            }
+
             if (materials.length > 0) {
                 welcomeSpeech += ` You can convert the units, scale the materials`;
                 if (showEcoInfo) {
