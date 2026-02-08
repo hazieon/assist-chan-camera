@@ -1,0 +1,8 @@
+{
+  "name": "Speech and camera assist-chan",
+  "description": "An AI assistant that extracts instructions from web links, answers questions, modifies steps, and provides text-to-speech and speech-to-text guidance.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
