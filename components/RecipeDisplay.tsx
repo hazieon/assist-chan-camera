@@ -47,75 +47,71 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 border-b border-gray-700 pb-6">
                 <div className="flex-grow space-y-3">
-                    <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+                    <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
                         {instructionSet.title}
                     </h2>
 
-                    {/* Quick Metadata: Time, Temp, Expiry */}
+                    {/* Quick Metadata */}
                     {(instructionSet.cookingTime || instructionSet.ovenTemp || instructionSet.expiryDate) && (
-                        <div className="flex flex-wrap gap-4 pt-1">
+                        <div className="flex flex-wrap gap-3 pt-1">
                             {instructionSet.cookingTime && (
-                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-full border border-accent/20 text-sm">
-                                    <ClockIcon className="w-4 h-4 text-accent" />
+                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg border border-accent/20 text-xs">
+                                    <ClockIcon className="w-3.5 h-3.5 text-accent" />
                                     <span>{instructionSet.cookingTime}</span>
                                 </div>
                             )}
                             {instructionSet.ovenTemp && (
-                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-full border border-orange-500/20 text-sm">
-                                    <FireIcon className="w-4 h-4 text-orange-500" />
+                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg border border-orange-500/20 text-xs text-orange-200">
+                                    <FireIcon className="w-3.5 h-3.5 text-orange-500" />
                                     <span>{instructionSet.ovenTemp}</span>
                                 </div>
                             )}
                             {instructionSet.expiryDate && (
-                                <div className="flex items-center gap-2 bg-red-900/20 px-3 py-1.5 rounded-full border border-red-500/20 text-sm text-red-200">
-                                    <CalendarIcon className="w-4 h-4 text-red-500" />
+                                <div className="flex items-center gap-2 bg-red-900/10 px-3 py-1.5 rounded-lg border border-red-500/20 text-xs text-red-300">
+                                    <CalendarIcon className="w-3.5 h-3.5 text-red-500" />
                                     <span>Expires: {instructionSet.expiryDate}</span>
                                 </div>
                             )}
                         </div>
                     )}
                     
-                    {/* Primary Source Buttons */}
+                    {/* Primary Source Link */}
                     {hasSources && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="pt-2">
                             <a 
                                 href={instructionSet.sources![0].uri}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-all text-sm font-bold shadow-md active:scale-95"
+                                className="inline-flex items-center gap-2 text-accent hover:text-indigo-400 text-sm font-bold underline underline-offset-4 decoration-accent/30 transition-all"
                             >
                                 <ExternalLinkIcon className="w-4 h-4" />
-                                <span>Open Original Page</span>
+                                <span>Visit Source Page</span>
                             </a>
                         </div>
                     )}
                 </div>
                 
-                {/* Secondary Actions (Eco/Revert) */}
+                {/* Secondary Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                     {showEcoButton && (
                         isEcoApplied ? (
                             <button
                                 onClick={onRevert}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 shadow-md h-[40px] text-sm"
-                                title="Back to original"
+                                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
                             >
                                 <UndoIcon className="w-4 h-4" />
-                                <span>Revert</span>
+                                <span>Original</span>
                             </button>
                         ) : (
                             <button
                                 onClick={onEcoSwitch}
                                 disabled={isModifying}
-                                className="flex items-center justify-center rounded-lg p-2 px-4 transition-all shadow-md active:scale-90 h-[40px] bg-green-600 hover:bg-green-500 text-white font-bold"
-                                aria-label="Switch to sustainable version"
-                                title="Make it eco-friendly"
+                                className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
+                                title="Switch to eco version"
                             >
-                                <div className="flex items-center gap-2">
-                                    <LeafIcon className="w-5 h-5 text-white animate-pulse" />
-                                    <span className="text-sm">Eco-Version</span>
-                                </div>
+                                <LeafIcon className="w-5 h-5 text-white animate-pulse" />
+                                <span>eco version</span>
                             </button>
                         )
                     )}
@@ -125,12 +121,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Materials Section */}
             {hasMaterials && (
                 <section className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-accent uppercase tracking-wider">Materials / Ingredients</h3>
-                    </div>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm md:text-base text-text-secondary">
+                    <h3 className="text-sm font-bold text-accent uppercase tracking-widest mb-4 opacity-80">Materials & Ingredients</h3>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm md:text-base text-text-secondary">
                         {instructionSet.materials.map((material, index) => (
-                            <li key={index} className="flex items-start gap-2 bg-primary/30 p-2.5 rounded border border-gray-700/50">
+                            <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg border border-gray-700/40">
                                 <span className="text-accent font-bold">•</span> {material}
                             </li>
                         ))}
@@ -141,13 +135,11 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Instructions Section */}
             <section>
                  <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold text-accent uppercase tracking-wider">Instructions</h3>
-                    </div>
+                    <h3 className="text-sm font-bold text-accent uppercase tracking-widest opacity-80">Steps (with repeated quantities)</h3>
                     {isReadingInstructions ? (
                         <button
                             onClick={onStopReading}
-                            className="flex items-center gap-2 bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-500 transition-all active:scale-95 text-sm shadow-lg"
+                            className="flex items-center gap-2 bg-red-600/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-all text-xs"
                         >
                             <StopIcon className="w-4 h-4" />
                             Stop Reading
@@ -156,10 +148,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                         <button
                             onClick={onReadInstructions}
                             disabled={isMuted || allStepsCompleted}
-                            className="flex items-center gap-2 bg-accent text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-500 transition-all active:scale-95 text-sm disabled:opacity-40 shadow-lg"
+                            className="flex items-center gap-2 bg-accent text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 transition-all text-xs disabled:opacity-40"
                         >
                             <PlayIcon className="w-4 h-4" />
-                            Read All Steps
+                            read aloud
                         </button>
                     )}
                 </div>
@@ -167,10 +159,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     {instructionSet.steps.map((step, index) => (
                         <li 
                             key={index} 
-                            className={`flex items-start gap-3 p-4 rounded-lg transition-all border ${
+                            className={`flex items-start gap-4 p-4 rounded-xl transition-all border ${
                                 completedSteps[index] 
-                                ? 'bg-green-900/10 border-green-800/30 text-text-secondary italic line-through' 
-                                : 'bg-primary/40 border-gray-700 shadow-sm'
+                                ? 'bg-green-900/5 border-green-800/20 text-text-secondary italic line-through' 
+                                : 'bg-primary/30 border-gray-800 shadow-sm'
                             }`}
                         >
                             <div className="flex-shrink-0 mt-1">
@@ -179,14 +171,14 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                     id={`step-${index}`}
                                     checked={completedSteps[index] ?? false}
                                     onChange={() => onToggleStep(index)}
-                                    className="h-6 w-6 rounded border-gray-600 bg-primary text-accent focus:ring-accent cursor-pointer"
+                                    className="h-5 w-5 rounded border-gray-700 bg-secondary text-accent focus:ring-accent cursor-pointer"
                                 />
                             </div>
                             <label
                                 htmlFor={`step-${index}`}
                                 className="flex-1 text-sm md:text-base leading-relaxed cursor-pointer select-none"
                             >
-                                <span className="font-bold mr-2 text-accent">{index + 1}.</span>
+                                <span className="font-bold mr-2 text-accent/70">{index + 1}.</span>
                                 {step}
                             </label>
                         </li>
@@ -194,21 +186,21 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                 </ol>
             </section>
 
-            {/* Footer Sources Section */}
-            {hasSources && instructionSet.sources!.length > 0 && (
-                <div className="mt-10 pt-6 border-t border-gray-700">
-                    <h3 className="text-xs font-semibold text-text-secondary uppercase mb-4 tracking-widest">References & Additional Sources</h3>
-                    <div className="flex flex-wrap gap-3">
+            {/* Reference Section */}
+            {hasSources && (
+                <div className="mt-8 pt-6 border-t border-gray-800">
+                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Grounding Sources</p>
+                    <div className="flex flex-wrap gap-2">
                         {instructionSet.sources!.map((source, index) => (
                             <a 
                                 key={index} 
                                 href={source.uri} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-xs bg-primary/60 px-4 py-2 rounded-full text-accent hover:bg-accent hover:text-white transition-all flex items-center gap-2 border border-accent/20"
+                                className="text-[11px] bg-primary/40 px-3 py-1.5 rounded-lg text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all flex items-center gap-2"
                             >
-                                <ExternalLinkIcon className="w-3.5 h-3.5" />
-                                <span className="max-w-[150px] truncate">{source.title || 'Source Link'}</span>
+                                <ExternalLinkIcon className="w-3 h-3" />
+                                <span className="truncate max-w-[200px]">{source.title || 'Source'}</span>
                             </a>
                         ))}
                     </div>

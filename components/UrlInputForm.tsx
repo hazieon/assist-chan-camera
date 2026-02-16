@@ -15,6 +15,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
     const [isListening, setIsListening] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [isProcessingImage, setIsProcessingImage] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
     
     const recognitionRef = useRef<any>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -168,9 +169,26 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
 
     return (
         <div className="bg-secondary p-6 rounded-lg shadow-lg border border-gray-800 animate-fade-in flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-                <h2 className="text-2xl font-bold text-accent">Smart Assistant</h2>
+            <div className="flex flex-col gap-2 relative">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-accent">Smart Assistant</h2>
+                    <button 
+                        onClick={() => setShowInfo(!showInfo)}
+                        className={`p-1.5 rounded-full border transition-all ${showInfo ? 'bg-accent border-accent text-white' : 'border-gray-700 text-gray-500 hover:border-accent hover:text-accent'}`}
+                        title="How it works"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                        </svg>
+                    </button>
+                </div>
                 <p className="text-text-secondary text-sm">Search, paste a URL, or scan physical instructions</p>
+                
+                {showInfo && (
+                    <div className="mt-2 p-3 bg-primary/40 border border-accent/20 rounded-lg text-xs leading-relaxed text-text-secondary animate-fade-in">
+                        <span className="text-accent font-bold">Tech Insight:</span> To interpret the text from the image input, Gemini 3 uses a multimodal method (beyond traditional OCR) to locate, interpret and extract text. It is relatively successful at detecting small text and discerning the spatial and semantic hierarchy of instructions, enabling it to intelligently separate materials from preparation steps while capturing crucial metadata like oven temperatures and expiration dates that standard OCR often misses.
+                    </div>
+                )}
             </div>
 
             {isCameraActive && (

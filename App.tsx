@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { InstructionSet, ChatMessage as ChatMessageType, Role } from './types';
-import { getInstructions, getSustainableSuggestion, getChatResponse, modifyInstructions, detectModificationIntent } from './services/geminiService';
+import { getInstructions, getChatResponse, modifyInstructions, detectModificationIntent } from './services/geminiService';
 import UrlInputForm from './components/UrlInputForm';
 import ChatInterface from './components/ChatInterface';
 import InstructionDisplay from './components/RecipeDisplay';
@@ -34,6 +34,25 @@ const App: React.FC = () => {
     const stopReadingRef = useRef(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+    const getLangTag = useCallback((lang: string | undefined): string => {
+        if (!lang) return 'en-US';
+        const clean = lang.toLowerCase().trim();
+        
+        if (/^en|english/.test(clean)) return 'en-US';
+        if (/^es|spanish|español/.test(clean)) return 'es-ES';
+        if (/^fr|french|français/.test(clean)) return 'fr-FR';
+        if (/^it|italian|italiano/.test(clean)) return 'it-IT';
+        if (/^pt|portuguese|português/.test(clean)) return 'pt-BR';
+        if (/^de|german|deutsch/.test(clean)) return 'de-DE';
+        if (/^zh|chinese/.test(clean)) return 'zh-CN';
+        if (/^ja|japanese/.test(clean)) return 'ja-JP';
+        if (/^ko|korean/.test(clean)) return 'ko-KR';
+        if (/^ru|russian/.test(clean)) return 'ru-RU';
+        if (/^nl|dutch/.test(clean)) return 'nl-NL';
+        
+        return clean.replace('_', '-');
+    }, []);
+
     const primeSpeech = useCallback(() => {
         if (hasPrimed || !window.speechSynthesis) return;
         const utterance = new SpeechSynthesisUtterance('');
@@ -42,7 +61,7 @@ const App: React.FC = () => {
         setHasPrimed(true);
     }, [hasPrimed]);
 
-    const speak = useCallback((text: string, onEnd?: () => void) => {
+    const speak = useCallback((text: string, onEnd?: () => void, langOverride?: string) => {
         if (!window.speechSynthesis || isMutedRef.current) {
             onEnd?.();
             return;
@@ -50,31 +69,38 @@ const App: React.FC = () => {
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text.replace(/[*#]/g, ''));
-        utterance.rate = 1.05;
+        utterance.rate = 1.0;
+        
+        const targetLangTag = langOverride || (instructionSet?.language ? getLangTag(instructionSet.language) : 'en-US');
+        utterance.lang = targetLangTag;
+        
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            const exactMatch = voices.find(v => v.lang.toLowerCase() === targetLangTag.toLowerCase());
+            const prefixMatch = voices.find(v => v.lang.toLowerCase().startsWith(targetLangTag.split('-')[0].toLowerCase()));
+            utterance.voice = exactMatch || prefixMatch || voices[0];
+        }
         
         utteranceRef.current = utterance;
-
         utterance.onend = () => {
             utteranceRef.current = null;
             onEnd?.();
         };
-        
         utterance.onerror = () => {
             utteranceRef.current = null;
             onEnd?.();
         };
 
         window.speechSynthesis.speak(utterance);
-    }, []);
+    }, [instructionSet, getLangTag]);
 
-    const toggleMessageSpeech = useCallback((index: number, text: string) => {
+    const toggleMessageSpeech = useCallback((index: number, text: string, lang?: string) => {
         if (speakingMessageIndex === index) {
             window.speechSynthesis.cancel();
             setSpeakingMessageIndex(null);
         } else {
             setSpeakingMessageIndex(index);
-            stopReadingRef.current = false;
-            speak(text, () => setSpeakingMessageIndex(null));
+            speak(text, () => setSpeakingMessageIndex(null), lang);
         }
     }, [speakingMessageIndex, speak]);
 
@@ -93,58 +119,20 @@ const App: React.FC = () => {
 
         try {
             const data = await getInstructions(input, imageData);
-            const materials = data.materials || [];
-            data.materials = materials;
-
-            const animalKeywords = ['meat', 'chicken', 'beef', 'pork', 'lamb', 'fish', 'egg', 'milk', 'dairy', 'cream', 'butter', 'honey', 'shrimp', 'steak', 'bacon', 'ham'];
-            const foundKeyword = materials.some(m => animalKeywords.some(k => m.toLowerCase().includes(k)));
-            
-            if (foundKeyword) data.hasAnimalProducts = true;
-
-            let showEcoInfo = false;
-            if (data.isFood) {
-                if (data.hasAnimalProducts && materials.length > 0) {
-                    const sug = await getSustainableSuggestion(data.title, materials);
-                    if (sug) data.sustainabilitySuggestion = sug;
-                    setIsEcoApplied(false);
-                    showEcoInfo = true;
-                } else if (!data.hasAnimalProducts && materials.length > 0) {
-                    setIsEcoApplied(true);
-                }
-            }
-
             setInstructionSet(data);
             setCompletedSteps(new Array((data.steps || []).length).fill(false));
             
-            const msg = `Loaded ${data.title}.`;
-            setChatHistory([{ role: Role.ASSISTANT, content: msg }]);
-
-            let welcomeSpeech = `here is the instructions for ${data.title}.`;
+            const lang = getLangTag(data.language);
+            const welcomeMsg = data.welcomeMessage || `I have successfully extracted the instructions for "${data.title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. How can I help you today?`;
             
-            // Highlight cooking details via voice for ALL recipes where found
-            if (data.cookingTime || data.ovenTemp) {
-                welcomeSpeech += " I found the cooking details.";
-                if (data.ovenTemp) welcomeSpeech += ` The required temperature is ${data.ovenTemp}.`;
-                if (data.cookingTime) welcomeSpeech += ` The estimated time is ${data.cookingTime}.`;
-                if (data.expiryDate && imageData) welcomeSpeech += ` Also, I noticed an expiry date of ${data.expiryDate}.`;
-            }
-
-            if (materials.length > 0) {
-                welcomeSpeech += ` You can convert the units, scale the materials`;
-                if (showEcoInfo) {
-                    welcomeSpeech += `, or generate a sustainable version by clicking the green eco button`;
-                }
-            }
-            welcomeSpeech += `. Enjoy.`;
-            
-            speak(welcomeSpeech);
+            setChatHistory([{ role: Role.ASSISTANT, content: welcomeMsg, language: lang }]);
+            speak(welcomeMsg, undefined, lang);
         } catch (e: any) {
-            console.error("Fetch error:", e);
             setError(e.message || "Error finding instructions.");
         } finally {
             setIsLoading(false);
         }
-    }, [speak, primeSpeech]);
+    }, [speak, primeSpeech, getLangTag]);
 
     const handleReadInstructions = useCallback(() => {
         if (!instructionSet || isMuted || !window.speechSynthesis) return;
@@ -153,12 +141,11 @@ const App: React.FC = () => {
         setIsReadingInstructions(true);
         setSpeakingMessageIndex(null);
         
+        const lang = getLangTag(instructionSet.language);
+        
         const readStep = (index: number) => {
             if (stopReadingRef.current || index >= instructionSet.steps.length) {
                 setIsReadingInstructions(false);
-                if (index >= instructionSet.steps.length && !stopReadingRef.current) {
-                    speak("Instructions complete.");
-                }
                 return;
             }
 
@@ -167,25 +154,24 @@ const App: React.FC = () => {
                 return;
             }
 
-            const text = `Step ${index + 1}. ${instructionSet.steps[index]}`;
+            const text = instructionSet.steps[index];
             speak(text, () => {
                 if (!stopReadingRef.current) {
                     setTimeout(() => readStep(index + 1), 600);
                 }
-            });
+            }, lang);
         };
 
         readStep(0);
-    }, [instructionSet, completedSteps, isMuted, speak]);
+    }, [instructionSet, completedSteps, isMuted, speak, getLangTag]);
 
     const handleStopReading = useCallback(() => {
         stopReadingRef.current = true;
         window.speechSynthesis.cancel();
         setIsReadingInstructions(false);
-        setSpeakingMessageIndex(null);
     }, []);
 
-    const handleModifyInstructions = useCallback(async (prompt: string, isEcoSwitch: boolean = false, customChatMsg?: string) => {
+    const handleModifyInstructions = useCallback(async (prompt: string, isEcoSwitch: boolean = false) => {
         if (!instructionSet) return;
         primeSpeech();
         setIsModifying(true);
@@ -193,43 +179,43 @@ const App: React.FC = () => {
         setPendingMod(null);
 
         try {
-            if (isEcoSwitch) {
-                if (!originalInstructionSet) {
-                    setOriginalInstructionSet(JSON.parse(JSON.stringify(instructionSet)));
-                }
+            if (isEcoSwitch && !originalInstructionSet) {
+                setOriginalInstructionSet(JSON.parse(JSON.stringify(instructionSet)));
             }
 
             const updated = await modifyInstructions(instructionSet, prompt);
             if (isEcoSwitch) {
                 setIsEcoApplied(true);
                 updated.hasAnimalProducts = false;
-            } else {
-                updated.hasAnimalProducts = updated.hasAnimalProducts ?? instructionSet.hasAnimalProducts;
             }
 
             setInstructionSet(updated);
             setCompletedSteps(new Array((updated.steps || []).length).fill(false));
-            const chatMsg = customChatMsg || "I've updated the instructions for you.";
-            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: chatMsg }]);
-            speak(chatMsg);
+            
+            const lang = getLangTag(updated.language);
+            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Instructions updated successfully.", language: lang }]);
+            speak("Updated.", undefined, lang);
         } catch (e) {
             setError("Update failed.");
         } finally {
             setIsModifying(false);
         }
-    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading]);
+    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading, getLangTag]);
 
     const handleConfirmModification = useCallback(() => {
-        if (pendingMod) {
-            handleModifyInstructions(pendingMod.prompt, false);
-        }
+        if (pendingMod) handleModifyInstructions(pendingMod.prompt, pendingMod.prompt.includes("VEGAN"));
     }, [pendingMod, handleModifyInstructions]);
 
     const handleCancelModification = useCallback(() => {
         setPendingMod(null);
-        const msg = "Okay, I won't change the instructions.";
-        setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: msg }]);
-        speak(msg);
+        setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Modification cancelled." }]);
+        speak("Cancelled.");
+    }, [speak]);
+
+    const requestModification = useCallback((prompt: string, summary: string) => {
+        setPendingMod({ prompt, summary });
+        setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: `Confirm modification: ${summary}?` }]);
+        speak("Confirm changes?");
     }, [speak]);
 
     const handleRevertInstructions = useCallback(() => {
@@ -240,10 +226,9 @@ const App: React.FC = () => {
         setIsEcoApplied(false);
         setOriginalInstructionSet(null);
         
-        const msg = "Reverted to the original version.";
-        setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: msg }]);
-        speak(msg);
-    }, [originalInstructionSet, handleStopReading, speak]);
+        const lang = getLangTag(originalInstructionSet.language);
+        speak("Reverted to original.", undefined, lang);
+    }, [originalInstructionSet, handleStopReading, speak, getLangTag]);
 
     const handleSendMessage = useCallback(async (message: string) => {
         if (!instructionSet || isAnswering) return;
@@ -253,72 +238,49 @@ const App: React.FC = () => {
         setChatHistory(prev => [...prev, { role: Role.USER, content: message }]);
 
         try {
-            const intentResult = await detectModificationIntent(message);
+            const intent = await detectModificationIntent(message, instructionSet.language);
             
-            if (intentResult && (intentResult === 'NEW_TOPIC' || intentResult.includes('NEW_TOPIC'))) {
+            if (intent?.type === 'MODIFICATION') {
                 setIsAnswering(false);
-                await handleFetchInstructions(message);
-            } else if (intentResult && intentResult.startsWith('READ_STEP_')) {
-                setIsAnswering(false);
-                const stepMatch = intentResult.match(/\d+/);
-                const stepNum = stepMatch ? parseInt(stepMatch[0], 10) : null;
-                
-                if (stepNum && stepNum > 0 && stepNum <= instructionSet.steps.length) {
-                    const stepText = instructionSet.steps[stepNum - 1];
-                    const fullResponse = `Here is Step ${stepNum}: ${stepText}`;
-                    setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: fullResponse }]);
-                    speak(fullResponse);
-                } else {
-                    const errorMsg = stepNum 
-                        ? `Step ${stepNum} doesn't exist. There are ${instructionSet.steps.length} steps in total.`
-                        : `I couldn't identify which step you wanted me to read. Please say something like "read step 3".`;
-                    setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: errorMsg }]);
-                    speak(errorMsg);
-                }
-            } else if (intentResult && intentResult !== 'FALSE') {
-                setIsAnswering(false);
-                setPendingMod({ prompt: message, summary: intentResult });
-                const question = `Would you like to rerender the instructions for "${intentResult.toLowerCase()}"?`;
-                setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: question }]);
-                speak(question);
+                requestModification(message, intent.summary);
             } else {
-                const aiResponse = await getChatResponse(instructionSet, chatHistory, message, completedSteps);
-                setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: aiResponse }]);
-                speak(aiResponse);
+                const aiResult = await getChatResponse(instructionSet, chatHistory, message, completedSteps);
+                const lang = getLangTag(aiResult.language);
+                
+                setChatHistory(prev => [...prev, { 
+                    role: Role.ASSISTANT, 
+                    content: aiResult.text, 
+                    language: lang 
+                }]);
+                
+                speak(aiResult.text, undefined, lang);
                 setIsAnswering(false);
             }
         } catch (e) {
             setIsAnswering(false);
-            console.error("Message handling error:", e);
+            console.error(e);
         }
-    }, [instructionSet, isAnswering, speak, chatHistory, completedSteps, primeSpeech, handleStopReading, handleFetchInstructions]);
+    }, [instructionSet, isAnswering, speak, chatHistory, completedSteps, primeSpeech, handleStopReading, requestModification, getLangTag]);
 
     return (
-        <div 
-            className="min-h-screen bg-primary text-text-primary font-sans flex flex-col"
-            onClick={primeSpeech}
-            onTouchStart={primeSpeech}
-        >
-            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20">
+        <div className="min-h-screen bg-primary text-text-primary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
+            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20 border-b border-gray-800">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BotIcon className="w-5 h-5 text-accent" />
-                        <h1 className="text-md md:text-lg font-bold tracking-tight">Chef AI Assistant</h1>
+                        <h1 className="text-md md:text-lg font-bold tracking-tight text-white">Chef AI Assistant</h1>
+                        {instructionSet?.language && (
+                            <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded border border-accent/30 ml-2 font-mono uppercase">
+                                {instructionSet.language}
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
-                         <button
-                            onClick={() => setIsContinuousListening(prev => !prev)}
-                            className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 scale-110 shadow-lg shadow-red-900/40' : 'bg-primary/50 hover:bg-primary'}`}
-                            title="Voice Input"
-                        >
+                         <button onClick={() => setIsContinuousListening(prev => !prev)} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
                             <MicIcon className="w-5 h-5 text-white" />
                         </button>
-                        <button
-                            onClick={() => setIsMuted(!isMuted)}
-                            className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all"
-                            title="Mute/Unmute"
-                        >
-                            {isMuted ? <SpeakerMuteIcon className="w-5 h-5" /> : <SpeakerIcon className="w-5 h-5 text-accent" />}
+                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary">
+                            {isMuted ? <SpeakerMuteIcon className="w-5 h-5 text-gray-500" /> : <SpeakerIcon className="w-5 h-5 text-accent" />}
                         </button>
                     </div>
                 </div>
@@ -327,17 +289,10 @@ const App: React.FC = () => {
             <main className="flex-grow container mx-auto p-4 flex flex-col gap-4 max-w-4xl">
                 <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} />
                 
-                {error && <div className="bg-red-900/50 p-3 rounded-lg text-sm border border-red-700 animate-pulse">{error}</div>}
-                
                 {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-10 gap-3">
-                        <div className="relative">
-                           <div className="animate-spin h-12 w-12 border-t-2 border-b-2 border-accent rounded-full"></div>
-                           <div className="absolute inset-0 flex items-center justify-center">
-                               <BotIcon className="w-5 h-5 text-accent animate-pulse" />
-                           </div>
-                        </div>
-                        <p className="text-accent font-medium animate-pulse">Analyzing content...</p>
+                    <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl border border-gray-800">
+                        <div className="animate-spin h-10 w-10 border-2 border-accent border-t-transparent rounded-full"></div>
+                        <p className="text-accent animate-pulse font-bold tracking-wide">SCRAPING SOURCE...</p>
                     </div>
                 )}
                 
@@ -355,19 +310,17 @@ const App: React.FC = () => {
                             onStopReading={handleStopReading}
                             isReadingInstructions={isReadingInstructions}
                             isMuted={isMuted}
-                            onEcoSwitch={() => handleModifyInstructions("Regenerate this recipe completely as a sustainable VEGAN version. Replace all animal products (meat, poultry, seafood, dairy, eggs, honey) with plant-based alternatives.", true, "I've updated this to a fully vegan, sustainable version.")}
+                            onEcoSwitch={() => requestModification("Regenerate as a sustainable VEGAN version.", "Vegan conversion")}
                             onRevert={handleRevertInstructions}
                             isModifying={isModifying}
                             isEcoApplied={isEcoApplied}
                         />
-                        {instructionSet.materials && instructionSet.materials.length > 0 && (
-                            <ActionButtons onModify={handleModifyInstructions} disabled={isLoading || isAnswering || isModifying} />
-                        )}
+                        <ActionButtons onModify={requestModification} disabled={isLoading || isAnswering || isModifying} />
                     </div>
                 )}
                 
                 {chatHistory.length > 0 && !isLoading && (
-                    <div className="bg-secondary p-4 rounded-lg shadow-inner">
+                    <div className="bg-secondary p-4 rounded-xl shadow-inner border border-gray-800">
                         <ChatInterface
                             chatHistory={chatHistory}
                             onSendMessage={handleSendMessage}
@@ -380,6 +333,7 @@ const App: React.FC = () => {
                             pendingMod={pendingMod}
                             onConfirmMod={handleConfirmModification}
                             onCancelMod={handleCancelModification}
+                            targetLang={instructionSet?.language}
                         />
                     </div>
                 )}

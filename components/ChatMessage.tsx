@@ -11,7 +11,7 @@ const ChatMessage: React.FC<{
     message: ChatMessageType; 
     isMuted: boolean; 
     isSpeaking: boolean;
-    onToggleSpeech: () => void; 
+    onToggleSpeech: (text: string, lang?: string) => void; 
 }> = ({ message, isMuted, isSpeaking, onToggleSpeech }) => {
     const isAssistant = message.role === Role.ASSISTANT;
 
@@ -28,26 +28,33 @@ const ChatMessage: React.FC<{
             }`}>
                 <p className="whitespace-pre-wrap text-sm md:text-base leading-relaxed">{message.content}</p>
                  {isAssistant && (
-                    <button 
-                        onClick={onToggleSpeech} 
-                        className={`mt-2 flex items-center gap-1.5 text-xs font-medium transition-all ${
-                            isSpeaking ? 'text-red-400' : 'text-text-secondary hover:text-accent'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
-                        disabled={isMuted}
-                    >
-                        {isSpeaking ? (
-                            <>
-                                <StopIcon className="w-4 h-4 animate-pulse" />
-                                <span>Stop Reading</span>
-                            </>
-                        ) : (
-                            <>
-                                <SpeakerIcon className="w-4 h-4 opacity-70 group-hover:opacity-100" />
-                                <span>Read Aloud</span>
-                            </>
+                    <div className="flex items-center gap-3 mt-2">
+                        <button 
+                            onClick={() => onToggleSpeech(message.content, message.language)} 
+                            className={`flex items-center gap-1.5 text-xs font-medium transition-all ${
+                                isSpeaking ? 'text-red-400' : 'text-text-secondary hover:text-accent'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
+                            disabled={isMuted}
+                        >
+                            {isSpeaking ? (
+                                <>
+                                    <StopIcon className="w-4 h-4 animate-pulse" />
+                                    <span>Stop Reading</span>
+                                </>
+                            ) : (
+                                <>
+                                    <SpeakerIcon className="w-4 h-4 opacity-70 group-hover:opacity-100" />
+                                    <span>Read Aloud</span>
+                                </>
+                            )}
+                        </button>
+                        {message.language && (
+                            <span className="text-[9px] uppercase font-mono opacity-40 bg-primary px-1 rounded border border-gray-700">
+                                {message.language}
+                            </span>
                         )}
-                    </button>
+                    </div>
                 )}
             </div>
 

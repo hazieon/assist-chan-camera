@@ -11,6 +11,7 @@ export interface InstructionSet {
     cookingTime?: string;
     ovenTemp?: string;
     expiryDate?: string;
+    welcomeMessage?: string;
 }
 
 export enum Role {
@@ -21,4 +22,5 @@ export enum Role {
 export interface ChatMessage {
     role: Role;
     content: string;
+    language?: string; // BCP-47 tag for this specific message
 }
