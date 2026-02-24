@@ -17,7 +17,7 @@ interface InstructionDisplayProps {
     onReadInstructions: () => void;
     onReadMaterials: () => void;
     onStopReading: () => void;
-    isReadingInstructions: boolean;
+    readingStatus: 'idle' | 'reading' | 'paused';
     isReadingMaterials: boolean;
     isMuted: boolean;
     onEcoSwitch: () => void;
@@ -33,7 +33,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     onReadInstructions,
     onReadMaterials,
     onStopReading,
-    isReadingInstructions,
+    readingStatus,
     isReadingMaterials,
     isMuted,
     onEcoSwitch,
@@ -158,26 +158,36 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
 
             {/* Instructions Section */}
             <section>
-                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                     <h3 className="text-sm font-bold text-accent uppercase tracking-widest opacity-80">Steps (with repeated quantities)</h3>
-                    {isReadingInstructions ? (
-                        <button
-                            onClick={onStopReading}
-                            className="flex items-center gap-2 bg-red-600/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-all text-xs"
-                        >
-                            <StopIcon className="w-4 h-4" />
-                            Stop Reading
-                        </button>
-                    ) : (
-                        <button
-                            onClick={onReadInstructions}
-                            disabled={isMuted || allStepsCompleted}
-                            className="flex items-center gap-2 bg-accent text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 transition-all text-xs disabled:opacity-40"
-                        >
-                            <PlayIcon className="w-4 h-4" />
-                            read aloud
-                        </button>
-                    )}
+                    <button
+                        onClick={onReadInstructions}
+                        disabled={isMuted || (readingStatus === 'idle' && allStepsCompleted)}
+                        className={`flex items-center gap-2 font-bold py-2 px-4 rounded-lg transition-all text-xs disabled:opacity-40 shadow-md ${
+                            readingStatus === 'reading' 
+                            ? 'bg-orange-600 hover:bg-orange-500 text-white' 
+                            : readingStatus === 'paused'
+                            ? 'bg-green-600 hover:bg-green-500 text-white'
+                            : 'bg-accent hover:bg-indigo-500 text-white'
+                        }`}
+                    >
+                        {readingStatus === 'reading' ? (
+                            <>
+                                <StopIcon className="w-4 h-4" />
+                                <span>pause</span>
+                            </>
+                        ) : readingStatus === 'paused' ? (
+                            <>
+                                <PlayIcon className="w-4 h-4" />
+                                <span>continue</span>
+                            </>
+                        ) : (
+                            <>
+                                <PlayIcon className="w-4 h-4" />
+                                <span>read aloud</span>
+                            </>
+                        )}
+                    </button>
                 </div>
                 <ol className="space-y-4">
                     {instructionSet.steps.map((step, index) => (
