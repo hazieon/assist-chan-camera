@@ -24,6 +24,7 @@ const App: React.FC = () => {
     const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
     const [isContinuousListening, setIsContinuousListening] = useState<boolean>(false);
     const [isReadingInstructions, setIsReadingInstructions] = useState<boolean>(false);
+    const [isReadingMaterials, setIsReadingMaterials] = useState<boolean>(false);
     const [hasPrimed, setHasPrimed] = useState(false);
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
@@ -111,6 +112,7 @@ const App: React.FC = () => {
         setError(null);
         setChatHistory([]);
         setIsReadingInstructions(false);
+        setIsReadingMaterials(false);
         setIsEcoApplied(false);
         setOriginalInstructionSet(null);
         setPendingMod(null);
@@ -139,6 +141,7 @@ const App: React.FC = () => {
         
         stopReadingRef.current = false;
         setIsReadingInstructions(true);
+        setIsReadingMaterials(false);
         setSpeakingMessageIndex(null);
         
         const lang = getLangTag(instructionSet.language);
@@ -165,10 +168,38 @@ const App: React.FC = () => {
         readStep(0);
     }, [instructionSet, completedSteps, isMuted, speak, getLangTag]);
 
+    const handleReadMaterials = useCallback(() => {
+        if (!instructionSet || isMuted || !window.speechSynthesis) return;
+        
+        stopReadingRef.current = false;
+        setIsReadingMaterials(true);
+        setIsReadingInstructions(false);
+        setSpeakingMessageIndex(null);
+        
+        const lang = getLangTag(instructionSet.language);
+        
+        const readMaterial = (index: number) => {
+            if (stopReadingRef.current || index >= instructionSet.materials.length) {
+                setIsReadingMaterials(false);
+                return;
+            }
+
+            const text = instructionSet.materials[index];
+            speak(text, () => {
+                if (!stopReadingRef.current) {
+                    setTimeout(() => readMaterial(index + 1), 600);
+                }
+            }, lang);
+        };
+
+        readMaterial(0);
+    }, [instructionSet, isMuted, speak, getLangTag]);
+
     const handleStopReading = useCallback(() => {
         stopReadingRef.current = true;
         window.speechSynthesis.cancel();
         setIsReadingInstructions(false);
+        setIsReadingMaterials(false);
     }, []);
 
     const handleModifyInstructions = useCallback(async (prompt: string, isEcoSwitch: boolean = false) => {
@@ -307,8 +338,10 @@ const App: React.FC = () => {
                                 setCompletedSteps(next);
                             }}
                             onReadInstructions={handleReadInstructions}
+                            onReadMaterials={handleReadMaterials}
                             onStopReading={handleStopReading}
                             isReadingInstructions={isReadingInstructions}
+                            isReadingMaterials={isReadingMaterials}
                             isMuted={isMuted}
                             onEcoSwitch={() => requestModification("Regenerate as a sustainable VEGAN version.", "Vegan conversion")}
                             onRevert={handleRevertInstructions}

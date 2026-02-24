@@ -15,8 +15,10 @@ interface InstructionDisplayProps {
     completedSteps: boolean[];
     onToggleStep: (index: number) => void;
     onReadInstructions: () => void;
+    onReadMaterials: () => void;
     onStopReading: () => void;
     isReadingInstructions: boolean;
+    isReadingMaterials: boolean;
     isMuted: boolean;
     onEcoSwitch: () => void;
     onRevert: () => void;
@@ -29,8 +31,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     completedSteps, 
     onToggleStep,
     onReadInstructions,
+    onReadMaterials,
     onStopReading,
     isReadingInstructions,
+    isReadingMaterials,
     isMuted,
     onEcoSwitch,
     onRevert,
@@ -121,7 +125,27 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Materials Section */}
             {hasMaterials && (
                 <section className="mb-8">
-                    <h3 className="text-sm font-bold text-accent uppercase tracking-widest mb-4 opacity-80">Materials & Ingredients</h3>
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                        <h3 className="text-sm font-bold text-accent uppercase tracking-widest opacity-80">Materials & Ingredients</h3>
+                        {isReadingMaterials ? (
+                            <button
+                                onClick={onStopReading}
+                                className="flex items-center gap-2 bg-red-600/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-all text-xs"
+                            >
+                                <StopIcon className="w-4 h-4" />
+                                Stop Reading
+                            </button>
+                        ) : (
+                            <button
+                                onClick={onReadMaterials}
+                                disabled={isMuted}
+                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 transition-all text-xs disabled:opacity-40"
+                            >
+                                <PlayIcon className="w-4 h-4" />
+                                read aloud
+                            </button>
+                        )}
+                    </div>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm md:text-base text-text-secondary">
                         {instructionSet.materials.map((material, index) => (
                             <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg border border-gray-700/40">
