@@ -22,6 +22,7 @@ interface InstructionDisplayProps {
     isMuted: boolean;
     onEcoSwitch: () => void;
     onRevert: () => void;
+    onStartCooking: () => void;
     isModifying: boolean;
     isEcoApplied: boolean;
 }
@@ -38,6 +39,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     isMuted,
     onEcoSwitch,
     onRevert,
+    onStartCooking,
     isModifying,
     isEcoApplied
 }) => {
@@ -97,6 +99,14 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                 
                 {/* Secondary Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        onClick={onStartCooking}
+                        disabled={isModifying}
+                        className="flex items-center gap-2 bg-accent hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg border border-accent/20"
+                    >
+                        <PlayIcon className="w-4 h-4" />
+                        <span>START</span>
+                    </button>
                     {showEcoButton && (
                         isEcoApplied ? (
                             <button

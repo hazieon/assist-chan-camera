@@ -57,11 +57,20 @@ export const getInstructions = async (input: string, imageData?: { data: string,
     }
 
     try {
+        const tools: any[] = [];
+        if (!imageData) {
+            if (isUrl) {
+                tools.push({ urlContext: {} });
+            } else {
+                tools.push({ googleSearch: {} });
+            }
+        }
+
         const response = await ai.models.generateContent({
             model: FAST_MODEL,
             contents: contents,
             config: {
-                tools: !imageData ? [{ googleSearch: {} }] : undefined,
+                tools: tools.length > 0 ? tools : undefined,
                 responseMimeType: "application/json"
             },
         });

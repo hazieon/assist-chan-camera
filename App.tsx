@@ -6,6 +6,7 @@ import UrlInputForm from './components/UrlInputForm';
 import ChatInterface from './components/ChatInterface';
 import InstructionDisplay from './components/RecipeDisplay';
 import ActionButtons from './components/ActionButtons';
+import CookingMode from './components/CookingMode';
 import { BotIcon } from './components/icons/BotIcon';
 import { SpeakerIcon } from './components/icons/SpeakerIcon';
 import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
@@ -26,6 +27,7 @@ const App: React.FC = () => {
     const [isReadingMaterials, setIsReadingMaterials] = useState<boolean>(false);
     const [currentReadingStep, setCurrentReadingStep] = useState<number>(0);
     const [readingStatus, setReadingStatus] = useState<'idle' | 'reading' | 'paused'>('idle');
+    const [isCookingMode, setIsCookingMode] = useState<boolean>(false);
     const [hasPrimed, setHasPrimed] = useState(false);
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
@@ -115,6 +117,7 @@ const App: React.FC = () => {
         setIsReadingMaterials(false);
         setReadingStatus('idle');
         setCurrentReadingStep(0);
+        setIsCookingMode(false);
         setIsEcoApplied(false);
         setOriginalInstructionSet(null);
         setPendingMod(null);
@@ -217,6 +220,25 @@ const App: React.FC = () => {
         setReadingStatus('idle');
     }, []);
 
+    const handleStartCooking = useCallback(() => {
+        if (!instructionSet) return;
+        primeSpeech();
+        
+        // Find next unchecked step
+        const nextStep = completedSteps.findIndex(c => !c);
+        const startIndex = nextStep === -1 ? 0 : nextStep;
+        
+        setCurrentReadingStep(startIndex);
+        setIsCookingMode(true);
+        handleStopReading();
+        
+        // Small delay to ensure mode is active before reading
+        setTimeout(() => {
+            setReadingStatus('idle'); // Reset to idle so handleReadInstructions starts fresh
+            handleReadInstructions();
+        }, 300);
+    }, [instructionSet, completedSteps, primeSpeech, handleReadInstructions, handleStopReading]);
+
     const handleModifyInstructions = useCallback(async (prompt: string, isEcoSwitch: boolean = false) => {
         if (!instructionSet) return;
         primeSpeech();
@@ -301,10 +323,23 @@ const App: React.FC = () => {
         if (lowerMsg === 'continue') {
             if (readingStatus === 'paused') {
                 handleReadInstructions();
+            } else if (isCookingMode && readingStatus === 'idle') {
+                if (currentReadingStep < (instructionSet?.steps.length || 0) - 1) {
+                    setCurrentReadingStep(prev => prev + 1);
+                    setTimeout(() => handleReadInstructions(), 100);
+                }
             }
             return;
         }
         if (lowerMsg === 'next' || lowerMsg === 'next please') {
+            if (isCookingMode) {
+                if (currentReadingStep < (instructionSet?.steps.length || 0) - 1) {
+                    handleStopReading();
+                    setCurrentReadingStep(prev => prev + 1);
+                    setTimeout(() => handleReadInstructions(), 100);
+                }
+                return;
+            }
             if (readingStatus === 'paused' || readingStatus === 'reading') {
                 const isMidStep = window.speechSynthesis.speaking || window.speechSynthesis.paused;
                 if (isMidStep) {
@@ -315,6 +350,21 @@ const App: React.FC = () => {
                 } else {
                     handleReadInstructions();
                 }
+            }
+            return;
+        }
+        if (lowerMsg === 'go back' || lowerMsg === 'previous') {
+            if (isCookingMode && currentReadingStep > 0) {
+                handleStopReading();
+                setCurrentReadingStep(prev => prev - 1);
+                setTimeout(() => handleReadInstructions(), 100);
+            }
+            return;
+        }
+        if (lowerMsg === 'exit' || lowerMsg === 'exit cooking mode') {
+            if (isCookingMode) {
+                handleStopReading();
+                setIsCookingMode(false);
             }
             return;
         }
@@ -412,6 +462,7 @@ const App: React.FC = () => {
                             onRevert={handleRevertInstructions}
                             isModifying={isModifying}
                             isEcoApplied={isEcoApplied}
+                            onStartCooking={handleStartCooking}
                         />
                         <ActionButtons onModify={requestModification} disabled={isLoading || isAnswering || isModifying} />
                     </div>
@@ -436,6 +487,39 @@ const App: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            {isCookingMode && instructionSet && (
+                <CookingMode 
+                    instructionSet={instructionSet}
+                    currentStepIndex={currentReadingStep}
+                    completedSteps={completedSteps}
+                    readingStatus={readingStatus}
+                    onNext={() => {
+                        if (currentReadingStep < instructionSet.steps.length - 1) {
+                            handleStopReading();
+                            setCurrentReadingStep(prev => prev + 1);
+                            setTimeout(() => handleReadInstructions(), 100);
+                        }
+                    }}
+                    onBack={() => {
+                        if (currentReadingStep > 0) {
+                            handleStopReading();
+                            setCurrentReadingStep(prev => prev - 1);
+                            setTimeout(() => handleReadInstructions(), 100);
+                        }
+                    }}
+                    onTogglePause={handleReadInstructions}
+                    onExit={() => {
+                        handleStopReading();
+                        setIsCookingMode(false);
+                    }}
+                    onToggleStep={(i) => {
+                        const next = [...completedSteps];
+                        next[i] = !next[i];
+                        setCompletedSteps(next);
+                    }}
+                />
+            )}
         </div>
     );
 };
