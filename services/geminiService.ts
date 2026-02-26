@@ -31,7 +31,7 @@ export const getInstructions = async (input: string, imageData?: { data: string,
                     1. Extract Title, Materials/Ingredients, and Steps.
                     2. MANDATORY: In the "steps" array, you MUST repeat the specific quantities or amounts for every ingredient whenever they are mentioned. For example, instead of "Add the flour", say "Add the 250g of flour".
                     3. Detect and return the BCP-47 language tag of the text in the image.
-                    4. Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. How can I help you today?" (translated naturally into the detected language).
+                    4. Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
                     
                     JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string, "cookingTime"?:string, "ovenTemp"?:string}.
                     Return ONLY the JSON string.`
@@ -46,12 +46,12 @@ export const getInstructions = async (input: string, imageData?: { data: string,
                If the page at this URL does not contain instructions or a recipe, return an error in the "title" field.
                MANDATORY: In the "steps" array, repeat specific quantities/amounts for every ingredient mentioned (e.g., "Add 200ml of water").
                Detect the page language and return JSON in that exact language.
-               Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title] from the provided link. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. How can I help you today?" (translated naturally into the detected language).
+                Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title] from the provided link. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
                JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string}. Return ONLY the JSON string.`
             : `Search for instructions for: "${input}". 
                MANDATORY: In the "steps" array, repeat quantities for every ingredient mentioned.
                Return JSON in the language of the query.
-               Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. How can I help you today?" (translated naturally into the detected language).
+               Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
                JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string}. Return ONLY the JSON string.`;
         contents = prompt;
     }

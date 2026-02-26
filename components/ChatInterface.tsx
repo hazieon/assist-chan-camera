@@ -35,8 +35,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     targetLang = 'en-US'
 }) => {
     const [message, setMessage] = useState('');
-    const [isLocalListening, setIsLocalListening] = useState(false);
-    const recognitionRef = useRef<any>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     
     useEffect(() => {
@@ -45,46 +43,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
     }, [chatHistory]);
     
-    useEffect(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
-        
-        const recognition = new SpeechRecognition();
-        recognitionRef.current = recognition;
-        recognition.lang = targetLang;
-        recognition.interimResults = true;
-
-        recognition.onstart = () => setIsLocalListening(true);
-        recognition.onend = () => setIsLocalListening(false);
-        recognition.onerror = () => setIsLocalListening(false);
-
-        recognition.onresult = (event: any) => {
-            let transcript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    transcript += event.results[i][0].transcript;
-                }
-            }
-            if (transcript.trim()) {
-                onSendMessage(transcript.trim());
-            }
-        };
-        
-        return () => {
-            try { recognition.abort(); } catch (e) {}
-        };
-    }, [onSendMessage, targetLang]);
-
-    const toggleLocalMic = () => {
-        if (isLocalListening) {
-            recognitionRef.current?.stop();
-        } else {
-            try {
-                recognitionRef.current?.start();
-            } catch (e) {}
-        }
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (message.trim() && !isAnswering) {
@@ -136,16 +94,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     type="text"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder={isLocalListening ? "Listening..." : "Speak to the assistant..."}
+                    placeholder={isContinuousListening ? "Listening..." : "Speak to the assistant..."}
                     className="flex-grow p-3 pr-24 bg-primary border border-gray-700 rounded-lg focus:ring-2 focus:ring-accent focus:outline-none transition-all text-sm text-white"
                     disabled={isAnswering || !!pendingMod}
                 />
                 <div className="absolute right-2 flex items-center gap-1">
                     <button 
                         type="button"
-                        onClick={toggleLocalMic}
+                        onClick={onToggleListening}
                         title="Voice Input"
-                        className={`p-2 rounded-lg transition-all ${isLocalListening ? 'bg-red-600 text-white' : 'text-accent hover:bg-gray-800'}`}
+                        className={`p-2 rounded-lg transition-all ${isContinuousListening ? 'bg-red-600 text-white' : 'text-accent hover:bg-gray-800'}`}
                         disabled={isAnswering || !!pendingMod}
                     >
                         <MicIcon className="w-5 h-5" />

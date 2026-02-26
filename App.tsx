@@ -28,6 +28,7 @@ const App: React.FC = () => {
     const [currentReadingStep, setCurrentReadingStep] = useState<number>(0);
     const [readingStatus, setReadingStatus] = useState<'idle' | 'reading' | 'paused'>('idle');
     const [isCookingMode, setIsCookingMode] = useState<boolean>(false);
+    const [isListening, setIsListening] = useState<boolean>(false);
     const [hasPrimed, setHasPrimed] = useState(false);
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
@@ -37,6 +38,53 @@ const App: React.FC = () => {
 
     const stopReadingRef = useRef(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const recognitionRef = useRef<any>(null);
+
+    // Global Speech Recognition
+    useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.lang = instructionSet?.language ? getLangTag(instructionSet.language) : 'en-US';
+        recognition.interimResults = false;
+        recognition.continuous = false; // We handle continuity manually for better control
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => {
+            setIsListening(false);
+            // Auto-restart if continuous listening is enabled
+            if (isContinuousListening) {
+                try { recognition.start(); } catch (e) {}
+            }
+        };
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error', event.error);
+            if (event.error === 'not-allowed') {
+                setIsContinuousListening(false);
+            }
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            if (transcript.trim()) {
+                handleSendMessage(transcript.trim());
+            }
+        };
+
+        return () => {
+            try { recognition.abort(); } catch (e) {}
+        };
+    }, [isContinuousListening, instructionSet?.language]);
+
+    useEffect(() => {
+        if (isContinuousListening) {
+            try { recognitionRef.current?.start(); } catch (e) {}
+        } else {
+            try { recognitionRef.current?.stop(); } catch (e) {}
+        }
+    }, [isContinuousListening]);
 
     const getLangTag = useCallback((lang: string | undefined): string => {
         if (!lang) return 'en-US';
@@ -126,16 +174,27 @@ const App: React.FC = () => {
 
         try {
             const data = await getInstructions(input, imageData);
+            
+            if (data.title.toLowerCase().includes('error')) {
+                const errorMsg = data.welcomeMessage || data.title || "I was unable to fetch the instructions. Try again or try a different link.";
+                setError(errorMsg);
+                speak(errorMsg);
+                setIsLoading(false);
+                return;
+            }
+
             setInstructionSet(data);
             setCompletedSteps(new Array((data.steps || []).length).fill(false));
             
             const lang = getLangTag(data.language);
-            const welcomeMsg = data.welcomeMessage || `I have successfully extracted the instructions for "${data.title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. How can I help you today?`;
+            const welcomeMsg = data.welcomeMessage || `I have successfully extracted the instructions for "${data.title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode.`;
             
             setChatHistory([{ role: Role.ASSISTANT, content: welcomeMsg, language: lang }]);
             speak(welcomeMsg, undefined, lang);
         } catch (e: any) {
-            setError(e.message || "Error finding instructions.");
+            const errorMsg = "I was unable to fetch the instructions. Try again or try a different link.";
+            setError(e.message || errorMsg);
+            speak(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -230,6 +289,7 @@ const App: React.FC = () => {
         
         setCurrentReadingStep(startIndex);
         setIsCookingMode(true);
+        setIsContinuousListening(true); // Auto-activate microphone
         handleStopReading();
         
         // Small delay to ensure mode is active before reading
@@ -435,6 +495,15 @@ const App: React.FC = () => {
             <main className="flex-grow container mx-auto p-4 flex flex-col gap-4 max-w-4xl">
                 <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} />
                 
+                {error && (
+                    <div className="bg-red-900/20 border border-red-900/50 text-red-200 p-4 rounded-xl animate-fade-in flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                        <p className="text-sm font-medium">{error}</p>
+                    </div>
+                )}
+                
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl border border-gray-800">
                         <div className="animate-spin h-10 w-10 border-2 border-accent border-t-transparent rounded-full"></div>
@@ -494,6 +563,9 @@ const App: React.FC = () => {
                     currentStepIndex={currentReadingStep}
                     completedSteps={completedSteps}
                     readingStatus={readingStatus}
+                    isListening={isListening}
+                    isContinuousListening={isContinuousListening}
+                    onToggleListening={() => setIsContinuousListening(!isContinuousListening)}
                     onNext={() => {
                         if (currentReadingStep < instructionSet.steps.length - 1) {
                             handleStopReading();
@@ -512,6 +584,7 @@ const App: React.FC = () => {
                     onExit={() => {
                         handleStopReading();
                         setIsCookingMode(false);
+                        setIsContinuousListening(false);
                     }}
                     onToggleStep={(i) => {
                         const next = [...completedSteps];

@@ -5,12 +5,16 @@ import { PlayIcon } from './icons/PlayIcon';
 import { StopIcon } from './icons/StopIcon';
 import { UndoIcon } from './icons/UndoIcon';
 import { BotIcon } from './icons/BotIcon';
+import { MicIcon } from './icons/MicIcon';
 
 interface CookingModeProps {
     instructionSet: InstructionSet;
     currentStepIndex: number;
     completedSteps: boolean[];
     readingStatus: 'idle' | 'reading' | 'paused';
+    isListening: boolean;
+    isContinuousListening: boolean;
+    onToggleListening: () => void;
     onNext: () => void;
     onBack: () => void;
     onTogglePause: () => void;
@@ -23,6 +27,9 @@ const CookingMode: React.FC<CookingModeProps> = ({
     currentStepIndex,
     completedSteps,
     readingStatus,
+    isListening,
+    isContinuousListening,
+    onToggleListening,
     onNext,
     onBack,
     onTogglePause,
@@ -42,12 +49,29 @@ const CookingMode: React.FC<CookingModeProps> = ({
                         <BotIcon className="w-6 h-6 text-accent" />
                         <h2 className="text-sm font-bold text-accent uppercase tracking-widest">Cooking Mode</h2>
                     </div>
-                    <button 
-                        onClick={onExit}
-                        className="text-text-secondary hover:text-white transition-colors p-2"
-                    >
-                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
-                    </button>
+                    <div className="flex items-center gap-4">
+                        {isContinuousListening && (
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full bg-red-500 ${isListening ? 'animate-pulse' : 'opacity-50'}`} />
+                                <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                                    {isListening ? 'Listening' : 'Ready'}
+                                </span>
+                            </div>
+                        )}
+                        <button 
+                            onClick={onToggleListening}
+                            className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 shadow-lg scale-110' : 'bg-primary hover:bg-gray-800'}`}
+                            title={isContinuousListening ? "Turn off Mic" : "Turn on Mic"}
+                        >
+                            <MicIcon className="w-5 h-5 text-white" />
+                        </button>
+                        <button 
+                            onClick={onExit}
+                            className="text-text-secondary hover:text-white transition-colors p-2 ml-2"
+                        >
+                            <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
