@@ -41,107 +41,111 @@ const CookingMode: React.FC<CookingModeProps> = ({
     const isLastStep = currentStepIndex === instructionSet.steps.length - 1;
 
     return (
-        <div className="fixed inset-0 z-50 bg-primary flex flex-col items-center justify-center p-4 md:p-8 animate-fade-in">
-            <div className="w-full max-w-3xl bg-secondary rounded-3xl shadow-2xl border border-gray-800 overflow-hidden flex flex-col h-full max-h-[80vh]">
-                {/* Header */}
-                <div className="p-6 border-b border-gray-800 flex items-center justify-between bg-secondary/50">
-                    <div className="flex items-center gap-3">
-                        <BotIcon className="w-6 h-6 text-accent" />
-                        <h2 className="text-sm font-bold text-accent uppercase tracking-widest">Cooking Mode</h2>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {isContinuousListening && (
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full bg-red-500 ${isListening ? 'animate-pulse' : 'opacity-50'}`} />
-                                <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
-                                    {isListening ? 'Listening' : 'Ready'}
-                                </span>
-                            </div>
-                        )}
-                        <button 
-                            onClick={onToggleListening}
-                            className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 shadow-lg scale-110' : 'bg-primary hover:bg-gray-800'}`}
-                            title={isContinuousListening ? "Turn off Mic" : "Turn on Mic"}
-                        >
-                            <MicIcon className="w-5 h-5 text-white" />
-                        </button>
-                        <button 
-                            onClick={onExit}
-                            className="text-text-secondary hover:text-white transition-colors p-2 ml-2"
-                        >
-                            <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
-                        </button>
-                    </div>
+        <div className="fixed inset-0 z-50 bg-primary flex flex-col animate-fade-in overflow-hidden">
+            {/* Header - Sticky at top */}
+            <div className="p-4 md:p-6 border-b border-gray-800 flex items-center justify-between bg-secondary/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                    <BotIcon className="w-6 h-6 text-accent" />
+                    <h2 className="text-xs md:text-sm font-bold text-accent uppercase tracking-widest">Cooking Mode</h2>
                 </div>
+                <div className="flex items-center gap-3">
+                    {isContinuousListening && (
+                        <div className="hidden sm:flex items-center gap-2 mr-2">
+                            <div className={`w-2 h-2 rounded-full bg-red-500 ${isListening ? 'animate-pulse' : 'opacity-50'}`} />
+                            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                                {isListening ? 'Listening' : 'Ready'}
+                            </span>
+                        </div>
+                    )}
+                    <button 
+                        onClick={onToggleListening}
+                        className={`p-2.5 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 shadow-lg scale-110' : 'bg-primary hover:bg-gray-800'}`}
+                        title={isContinuousListening ? "Turn off Mic" : "Turn on Mic"}
+                    >
+                        <MicIcon className="w-5 h-5 text-white" />
+                    </button>
+                    <button 
+                        onClick={onExit}
+                        className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg transition-colors ml-2"
+                    >
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Exit</span>
+                    </button>
+                </div>
+            </div>
 
-                {/* Content */}
-                <div className="flex-grow flex flex-col items-center justify-center p-8 md:p-12 text-center overflow-y-auto">
-                    <div className="mb-6">
-                        <span className="text-accent font-mono text-lg font-bold">
-                            Step {currentStepIndex + 1} of {instructionSet.steps.length}
+            {/* Content - Scrollable area */}
+            <div className="flex-grow flex flex-col items-center justify-center p-6 md:p-12 text-center overflow-y-auto">
+                <div className="w-full max-w-3xl mx-auto">
+                    <div className="mb-4 md:mb-8">
+                        <span className="text-accent font-mono text-sm md:text-lg font-bold bg-accent/10 px-4 py-1 rounded-full border border-accent/20">
+                            Step {currentStepIndex + 1}/{instructionSet.steps.length}
                         </span>
                     </div>
                     
-                    <h3 className="text-2xl md:text-4xl font-bold leading-tight text-white mb-8">
-                        {step}
-                    </h3>
+                    <div className="min-h-[150px] md:min-h-[200px] flex items-center justify-center mb-8 md:mb-12">
+                        <h3 className="text-xl md:text-4xl lg:text-5xl font-bold leading-tight text-white">
+                            {step}
+                        </h3>
+                    </div>
 
-                    <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center justify-center gap-4 p-4 bg-secondary/30 rounded-2xl border border-gray-800/50 max-w-xs mx-auto">
                         <input
                             type="checkbox"
                             id={`cooking-step-${currentStepIndex}`}
                             checked={completedSteps[currentStepIndex] ?? false}
                             onChange={() => onToggleStep(currentStepIndex)}
-                            className="h-8 w-8 rounded-lg border-gray-700 bg-primary text-accent focus:ring-accent cursor-pointer transition-all"
+                            className="h-6 w-6 md:h-8 md:w-8 rounded-lg border-gray-700 bg-primary text-accent focus:ring-accent cursor-pointer transition-all"
                         />
                         <label 
                             htmlFor={`cooking-step-${currentStepIndex}`}
-                            className="text-lg font-medium text-text-secondary cursor-pointer select-none"
+                            className="text-sm md:text-lg font-medium text-text-secondary cursor-pointer select-none"
                         >
                             Mark as completed
                         </label>
                     </div>
                 </div>
+            </div>
 
-                {/* Controls */}
-                <div className="p-8 bg-primary/30 border-t border-gray-800">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            {/* Controls - Sticky at bottom */}
+            <div className="p-6 md:p-10 bg-secondary/80 backdrop-blur-md border-t border-gray-800">
+                <div className="max-w-3xl mx-auto">
+                    <div className="flex items-center justify-between gap-4 md:gap-8">
                         <button 
                             onClick={onBack}
                             disabled={isFirstStep}
-                            className="w-full md:w-auto px-8 py-4 rounded-2xl bg-gray-800 text-white font-bold hover:bg-gray-700 disabled:opacity-20 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-gray-800 text-white font-bold hover:bg-gray-700 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
                         >
                             <UndoIcon className="w-5 h-5" />
-                            Back
+                            <span className="hidden sm:inline">Back</span>
                         </button>
 
                         <button 
                             onClick={onTogglePause}
-                            className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-xl ${
+                            className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center transition-all shadow-2xl shrink-0 ${
                                 readingStatus === 'reading' 
                                 ? 'bg-orange-600 hover:bg-orange-500 scale-110' 
                                 : 'bg-green-600 hover:bg-green-500'
                             }`}
                         >
                             {readingStatus === 'reading' ? (
-                                <StopIcon className="w-8 h-8 text-white" />
+                                <StopIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                             ) : (
-                                <PlayIcon className="w-8 h-8 text-white ml-1" />
+                                <PlayIcon className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
                             )}
                         </button>
 
                         <button 
                             onClick={onNext}
                             disabled={isLastStep}
-                            className="w-full md:w-auto px-8 py-4 rounded-2xl bg-accent text-white font-bold hover:bg-indigo-500 disabled:opacity-20 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-accent text-white font-bold hover:bg-indigo-500 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
                         >
-                            Next
-                            <PlayIcon className="w-5 h-5 rotate-0" />
+                            <span className="hidden sm:inline">Next</span>
+                            <PlayIcon className="w-5 h-5" />
                         </button>
                     </div>
                     
-                    <div className="mt-6 text-center">
-                        <p className="text-xs text-text-secondary font-medium uppercase tracking-[0.2em] opacity-50">
+                    <div className="mt-6 md:mt-8 text-center">
+                        <p className="text-[10px] md:text-xs text-text-secondary font-medium uppercase tracking-[0.2em] opacity-60">
                             Voice commands: "Next", "Go Back", "Pause", "Continue"
                         </p>
                     </div>

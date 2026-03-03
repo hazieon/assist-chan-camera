@@ -9,6 +9,7 @@ interface ChatInterfaceProps {
     chatHistory: ChatMessageType[];
     onSendMessage: (message: string) => void;
     isAnswering: boolean;
+    isCookingMode: boolean;
     isContinuousListening: boolean;
     onToggleListening: () => void;
     isMuted: boolean;
@@ -24,6 +25,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     chatHistory, 
     onSendMessage, 
     isAnswering, 
+    isCookingMode,
     isContinuousListening, 
     onToggleListening, 
     isMuted, 
@@ -94,17 +96,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     type="text"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder={isContinuousListening ? "Listening..." : "Speak to the assistant..."}
-                    className="flex-grow p-3 pr-24 bg-primary border border-gray-700 rounded-lg focus:ring-2 focus:ring-accent focus:outline-none transition-all text-sm text-white"
-                    disabled={isAnswering || !!pendingMod}
+                    placeholder={isCookingMode ? "Chat disabled in Cooking Mode" : (isContinuousListening ? "Listening..." : "Speak to the assistant...")}
+                    className={`flex-grow p-3 pr-24 bg-primary border border-gray-700 rounded-lg focus:ring-2 focus:ring-accent focus:outline-none transition-all text-sm text-white ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={isAnswering || !!pendingMod || isCookingMode}
                 />
                 <div className="absolute right-2 flex items-center gap-1">
                     <button 
                         type="button"
                         onClick={onToggleListening}
-                        title="Voice Input"
-                        className={`p-2 rounded-lg transition-all ${isContinuousListening ? 'bg-red-600 text-white' : 'text-accent hover:bg-gray-800'}`}
-                        disabled={isAnswering || !!pendingMod}
+                        title={isCookingMode ? "Voice commands only" : "Voice Input"}
+                        className={`p-2 rounded-lg transition-all ${isContinuousListening ? 'bg-red-600 text-white' : 'text-accent hover:bg-gray-800'} ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isAnswering || !!pendingMod || isCookingMode}
                     >
                         <MicIcon className="w-5 h-5" />
                     </button>
@@ -112,7 +114,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         type="submit" 
                         title="Send Message"
                         className="p-2 bg-accent rounded-lg hover:bg-indigo-500 transition-all shadow-lg text-white disabled:opacity-30" 
-                        disabled={!message.trim() || isAnswering || !!pendingMod}
+                        disabled={!message.trim() || isAnswering || !!pendingMod || isCookingMode}
                     >
                         <SendIcon className="w-5 h-5" />
                     </button>

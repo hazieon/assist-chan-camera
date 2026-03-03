@@ -47,15 +47,24 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     const showEcoButton = !!instructionSet.isFood && instructionSet.materials.length > 0;
     const hasSources = instructionSet.sources && instructionSet.sources.length > 0;
     const hasMaterials = instructionSet.materials && instructionSet.materials.length > 0;
+    const completedCount = completedSteps.filter(Boolean).length;
+    const totalCount = instructionSet.steps.length;
 
     return (
         <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg border border-gray-800 animate-fade-in">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 border-b border-gray-700 pb-6">
                 <div className="flex-grow space-y-3">
-                    <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
-                        {instructionSet.title}
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
+                            {instructionSet.title}
+                        </h2>
+                        {totalCount > 0 && (
+                            <span className="shrink-0 bg-accent/10 text-accent text-[10px] font-bold px-2 py-1 rounded border border-accent/20 font-mono">
+                                {completedCount}/{totalCount}
+                            </span>
+                        )}
+                    </div>
 
                     {/* Quick Metadata */}
                     {(instructionSet.cookingTime || instructionSet.ovenTemp || instructionSet.expiryDate) && (
