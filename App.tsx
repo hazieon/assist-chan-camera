@@ -21,6 +21,35 @@ const App: React.FC = () => {
     const [isEcoApplied, setIsEcoApplied] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+    
+    const safeSetError = useCallback((err: any) => {
+        if (!err) {
+            setError(null);
+            return;
+        }
+        let msg = "An error occurred";
+        try {
+            // Defensively check for Window objects to avoid SecurityError in cross-origin iframes
+            const isWindow = err === window || (typeof Window !== 'undefined' && err instanceof Window);
+            if (isWindow) {
+                msg = "[System Error: Restricted Object]";
+            } else if (typeof err === 'string') {
+                msg = err;
+            } else if (err instanceof Error) {
+                msg = err.message;
+            } else if (err && typeof err === 'object') {
+                // Use a safe way to check for message
+                const potentialMsg = (err as any).message;
+                msg = potentialMsg ? String(potentialMsg) : String(err);
+            } else {
+                msg = String(err);
+            }
+        } catch (e) {
+            msg = "A security or system error occurred";
+        }
+        setError(msg);
+    }, []);
+
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
     const [isContinuousListening, setIsContinuousListening] = useState<boolean>(false);
@@ -39,7 +68,8 @@ const App: React.FC = () => {
     const stopReadingRef = useRef(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const recognitionRef = useRef<any>(null);
-    const isStartedRef = useRef(false);
+    const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
+    const restartTimeoutRef = useRef<any>(null);
     const isContinuousListeningRef = useRef(isContinuousListening);
     const handleSendMessageRef = useRef<any>(null);
 
@@ -71,13 +101,14 @@ const App: React.FC = () => {
     }, [hasPrimed]);
 
     const speak = useCallback((text: string, onEnd?: () => void, langOverride?: string) => {
-        if (!window.speechSynthesis || isMutedRef.current) {
+        if (!window.speechSynthesis || isMutedRef.current || !text) {
             onEnd?.();
             return;
         }
         window.speechSynthesis.cancel();
         
-        const utterance = new SpeechSynthesisUtterance(text.replace(/[*#]/g, ''));
+        const safeText = String(text).replace(/[*#]/g, '');
+        const utterance = new SpeechSynthesisUtterance(safeText);
         utterance.rate = 1.0;
         
         const targetLangTag = langOverride || (instructionSet?.language ? getLangTag(instructionSet.language) : 'en-US');
@@ -134,7 +165,7 @@ const App: React.FC = () => {
             
             if (data.title.toLowerCase().includes('error')) {
                 const errorMsg = data.welcomeMessage || data.title || "I was unable to fetch the instructions. Try again or try a different link.";
-                setError(errorMsg);
+                safeSetError(errorMsg);
                 speak(errorMsg);
                 setIsLoading(false);
                 return;
@@ -150,23 +181,25 @@ const App: React.FC = () => {
             speak(welcomeMsg, undefined, lang);
         } catch (e: any) {
             const errorMsg = "I was unable to fetch the instructions. Try again or try a different link.";
-            setError(e.message || errorMsg);
+            safeSetError(e);
             speak(errorMsg);
         } finally {
             setIsLoading(false);
         }
     }, [speak, primeSpeech, getLangTag]);
 
-    const handleReadInstructions = useCallback((indexOverride?: number) => {
+    const handleReadInstructions = useCallback((indexOverride?: number | any) => {
         if (!instructionSet || isMuted || !window.speechSynthesis) return;
         
-        if (readingStatus === 'reading' && indexOverride === undefined) {
-            window.speechSynthesis.pause();
+        const actualIndex = typeof indexOverride === 'number' ? indexOverride : undefined;
+        
+        if (readingStatus === 'reading' && actualIndex === undefined) {
+            window.speechSynthesis.cancel();
             setReadingStatus('paused');
             return;
         }
 
-        if (readingStatus === 'paused' && window.speechSynthesis.paused && indexOverride === undefined) {
+        if (readingStatus === 'paused' && window.speechSynthesis.paused && actualIndex === undefined) {
             window.speechSynthesis.resume();
             setReadingStatus('reading');
             return;
@@ -178,10 +211,10 @@ const App: React.FC = () => {
         
         const lang = getLangTag(instructionSet.language);
         
-        let index = indexOverride !== undefined ? indexOverride : currentReadingStep;
+        let index = actualIndex !== undefined ? actualIndex : currentReadingStep;
         
         // Only auto-find first uncompleted step if we are starting from scratch and not in cooking mode
-        if (indexOverride === undefined && readingStatus === 'idle' && !isCookingMode) {
+        if (actualIndex === undefined && readingStatus === 'idle' && !isCookingMode) {
             const firstUncompleted = completedSteps.findIndex(c => !c);
             index = firstUncompleted === -1 ? 0 : firstUncompleted;
         }
@@ -195,8 +228,10 @@ const App: React.FC = () => {
         setReadingStatus('reading');
         setCurrentReadingStep(index);
 
-        const text = instructionSet.steps[index];
-        speak(text, () => {
+        const stepText = instructionSet.steps[index];
+        const textToSpeak = isCookingMode ? `Step ${index + 1}: ${stepText}` : stepText;
+        
+        speak(textToSpeak, () => {
             if (!stopReadingRef.current) {
                 setReadingStatus('paused');
                 // We no longer auto-increment, waiting for user input
@@ -283,7 +318,7 @@ const App: React.FC = () => {
             setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Instructions updated successfully.", language: lang }]);
             speak("Updated.", undefined, lang);
         } catch (e) {
-            setError("Update failed.");
+            safeSetError("Update failed.");
         } finally {
             setIsModifying(false);
         }
@@ -323,19 +358,22 @@ const App: React.FC = () => {
     }, [originalInstructionSet, handleStopReading, speak, getLangTag]);
 
     const handleSendMessage = useCallback(async (message: string) => {
-        if (!instructionSet || isAnswering) return;
+        if (!instructionSet) return;
 
         const lowerMsg = message.toLowerCase().trim().replace(/[.,?!]/g, '');
         
         // Voice Commands - More robust matching
-        const isNext = /^(next|next step|forward|go next)/.test(lowerMsg);
-        const isBack = /^(go back|previous|back|previous step|go bacl)/.test(lowerMsg);
-        const isStop = /^(stop|pause|wait|hold on)/.test(lowerMsg);
-        const isContinue = /^(continue|resume|go on|keep going)/.test(lowerMsg);
-        const isReadMaterials = /^(read materials|ingredients|what do i need)/.test(lowerMsg);
-        const isReadSteps = /^(read steps|read instructions|start reading)/.test(lowerMsg);
-        const isExit = /^(exit|close|quit|stop cooking)/.test(lowerMsg);
-        const isRestart = /^(restart|start over|from the beginning)/.test(lowerMsg);
+        const isNext = /\b(next|next step|forward|go next)\b/.test(lowerMsg);
+        const isBack = /\b(go back|previous|back|previous step|go bacl)\b/.test(lowerMsg);
+        const isStop = /\b(stop|pause|wait|hold on|hush|quiet)\b/.test(lowerMsg);
+        const isContinue = /\b(continue|resume|go on|keep going)\b/.test(lowerMsg);
+        const isReadMaterials = /\b(read materials|ingredients|what do i need)\b/.test(lowerMsg);
+        const isReadSteps = /\b(read steps|read instructions|start reading)\b/.test(lowerMsg);
+        const isExit = /\b(exit|close|quit|stop cooking)\b/.test(lowerMsg);
+        const isRestart = /\b(restart|start over|from the beginning)\b/.test(lowerMsg);
+
+        // If we are answering, only allow stop/pause to interrupt
+        if (isAnswering && !isStop) return;
         
         // Match "step 5", "go to step 3", etc.
         const stepMatch = lowerMsg.match(/(?:go to )?step (\d+)/);
@@ -446,9 +484,9 @@ const App: React.FC = () => {
         setChatHistory(prev => [...prev, { role: Role.USER, content: message }]);
 
         try {
-            const intent = await detectModificationIntent(message, instructionSet.language);
+            const intent = await detectModificationIntent(message, instructionSet?.language || 'en-US');
             
-            if (intent?.type === 'MODIFICATION') {
+            if (intent?.type === 'MODIFICATION' && instructionSet) {
                 setIsAnswering(false);
                 requestModification(message, intent.summary);
             } else {
@@ -494,21 +532,25 @@ const App: React.FC = () => {
 
         recognition.onend = () => {
             setIsListening(false);
-            isStartedRef.current = false;
+            recognitionStateRef.current = 'IDLE';
+            
+            if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
             
             // Auto-restart if continuous listening is enabled
             if (isContinuousListeningRef.current) {
                 // Slightly longer delay to avoid "network" errors from rapid restarts
                 const delay = networkErrorRetryCount > 0 ? Math.min(1000 * Math.pow(2, networkErrorRetryCount), 5000) : 300;
                 
-                setTimeout(() => {
-                    if (isContinuousListeningRef.current && !isStartedRef.current) {
+                restartTimeoutRef.current = setTimeout(() => {
+                    if (isContinuousListeningRef.current && recognitionStateRef.current === 'IDLE') {
                         try { 
-                            recognition.start(); 
-                            // If we successfully start, we can eventually reset the retry count
-                            // but we'll do it in onstart to be sure
+                            if (recognitionRef.current) {
+                                recognitionStateRef.current = 'STARTING';
+                                recognitionRef.current.start(); 
+                            }
                         } catch (e) { 
-                            // Ignore errors during restart
+                            recognitionStateRef.current = 'IDLE';
+                            // Ignore "already started" errors
                         }
                     }
                 }, delay);
@@ -517,16 +559,17 @@ const App: React.FC = () => {
 
         recognition.onstart = () => {
             setIsListening(true);
-            isStartedRef.current = true;
+            recognitionStateRef.current = 'STARTED';
             networkErrorRetryCount = 0; // Reset retry count on successful start
         };
 
         recognition.onerror = (event: any) => {
+            recognitionStateRef.current = 'IDLE';
             const isBenign = event.error === 'aborted' || event.error === 'no-speech';
             const isNetwork = event.error === 'network';
 
             if (!isBenign && !isNetwork) {
-                console.error('Speech recognition error', event.error);
+                console.error('Speech recognition error', String(event.error));
             }
 
             if (isNetwork) {
@@ -540,7 +583,6 @@ const App: React.FC = () => {
             if (event.error === 'not-allowed') {
                 setIsContinuousListening(false);
             }
-            isStartedRef.current = false;
         };
 
         let lastProcessedTranscript = '';
@@ -553,7 +595,13 @@ const App: React.FC = () => {
 
             // Fast-path for commands using interim results
             // This drastically reduces latency for short commands
-            const isCommand = /^(next|back|stop|pause|continue|resume|step \d+)/.test(transcript);
+            const isCommand = /\b(next|back|stop|pause|continue|resume|step \d+|hush|quiet)\b/.test(transcript);
+            const isUrgentStop = /\b(stop|pause|wait|hold on|hush|quiet)\b/.test(transcript);
+
+            // Immediate interruption for stop/pause commands
+            if (isUrgentStop && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
             
             // Only process if it's a new command or final result
             // Debounce to prevent double-triggering within 1 second for the same transcript
@@ -603,13 +651,27 @@ const App: React.FC = () => {
 
     // Control start/stop
     useEffect(() => {
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        
         if (isContinuousListening) {
-            if (!isStartedRef.current) {
-                try { recognitionRef.current?.start(); } catch (e) {}
+            if (recognitionStateRef.current === 'IDLE' && recognitionRef.current) {
+                try { 
+                    recognitionStateRef.current = 'STARTING';
+                    recognitionRef.current.start(); 
+                } catch (e) {
+                    recognitionStateRef.current = 'IDLE';
+                    // Ignore "already started" errors
+                }
             }
         } else {
-            if (isStartedRef.current) {
-                try { recognitionRef.current?.stop(); } catch (e) {}
+            if ((recognitionStateRef.current === 'STARTED' || recognitionStateRef.current === 'STARTING') && recognitionRef.current) {
+                try { 
+                    recognitionStateRef.current = 'STOPPING';
+                    recognitionRef.current.stop(); 
+                } catch (e) {
+                    recognitionStateRef.current = 'IDLE';
+                    // Ignore errors
+                }
             }
         }
     }, [isContinuousListening]);
@@ -683,7 +745,7 @@ const App: React.FC = () => {
                                 next[i] = !next[i];
                                 setCompletedSteps(next);
                             }}
-                            onReadInstructions={handleReadInstructions}
+                            onReadInstructions={() => handleReadInstructions()}
                             onReadMaterials={handleReadMaterials}
                             onStopReading={handleStopReading}
                             readingStatus={readingStatus}
@@ -745,7 +807,7 @@ const App: React.FC = () => {
                             setTimeout(() => handleReadInstructions(prevStep), 100);
                         }
                     }}
-                    onTogglePause={handleReadInstructions}
+                    onTogglePause={() => handleReadInstructions()}
                     onExit={() => {
                         handleStopReading();
                         setIsCookingMode(false);

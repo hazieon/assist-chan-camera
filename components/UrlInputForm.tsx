@@ -13,6 +13,7 @@ interface UrlInputFormProps {
 const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
     const [inputValue, setInputValue] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [isProcessingImage, setIsProcessingImage] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
@@ -37,6 +38,11 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
+            recognition.onstart = () => {
+                setIsListening(true);
+                recognitionStateRef.current = 'STARTED';
+            };
+
             recognition.onresult = (event: any) => {
                 const transcript = Array.from(event.results)
                     .map((result: any) => result[0])
@@ -50,8 +56,14 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
                 }
             };
 
-            recognition.onerror = () => setIsListening(false);
-            recognition.onend = () => setIsListening(false);
+            recognition.onerror = () => {
+                setIsListening(false);
+                recognitionStateRef.current = 'IDLE';
+            };
+            recognition.onend = () => {
+                setIsListening(false);
+                recognitionStateRef.current = 'IDLE';
+            };
             recognitionRef.current = recognition;
         }
 
@@ -117,15 +129,19 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading }) => {
     }, [isCameraActive]);
 
     const toggleListening = () => {
-        if (isListening) {
+        if (isListening || recognitionStateRef.current === 'STARTED' || recognitionStateRef.current === 'STARTING') {
+            recognitionStateRef.current = 'STOPPING';
             recognitionRef.current?.stop();
             setIsListening(false);
         } else {
+            if (recognitionStateRef.current !== 'IDLE') return;
             setInputValue('');
             try {
+                recognitionStateRef.current = 'STARTING';
                 recognitionRef.current?.start();
                 setIsListening(true);
             } catch (e) {
+                recognitionStateRef.current = 'IDLE';
                 console.error("Speech recognition failed to start", e);
             }
         }
