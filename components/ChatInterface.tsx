@@ -55,6 +55,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     return (
         <div className="flex flex-col h-[40vh] md:h-[50vh] min-h-[300px]">
+            <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+                <h3 className="text-sm font-bold text-text-secondary uppercase tracking-widest">Personal Assistant</h3>
+            </div>
             <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-3 bg-primary/40 rounded-xl space-y-4 scroll-smooth border border-gray-800/50">
                 {chatHistory.map((msg, index) => (
                     <ChatMessage 

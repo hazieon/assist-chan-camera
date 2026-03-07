@@ -15,45 +15,31 @@ const FAST_MODEL = 'gemini-3-flash-preview';
 export const getInstructions = async (input: string, imageData?: { data: string, mimeType: string }): Promise<InstructionSet> => {
     const isUrl = !imageData && (input.startsWith('http') || input.includes('.com') || input.includes('.org') || input.includes('.net'));
     
-    let contents: any;
+    const systemInstruction = `You are an expert at extracting structured instructions from web content or images.
     
+    CRITICAL EXTRACTION RULE: You MUST extract instructions ONLY from the provided source (URL, Search Result, or Image). 
+    DO NOT use your own training data or general knowledge for the specific recipe/instructions. 
+    If the source does not contain clear instructions, return a JSON with "title": "Error: No instructions found".
+    
+    MANDATORY STEP FORMATTING: In the "steps" array, you MUST repeat the specific quantities or amounts for every ingredient whenever they are mentioned. For example, instead of "Add the flour", say "Add the 250g of flour".
+    
+    LANGUAGE: Detect the language of the source and return the JSON in that exact language.
+    
+    WELCOME MESSAGE: Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title] exclusively from the provided source. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally).
+    
+    JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string, "cookingTime"?:string, "ovenTemp"?:string}.
+    Return ONLY the JSON string.`;
+
+    let contents: any;
     if (imageData) {
         contents = {
             parts: [
-                {
-                    inlineData: {
-                        data: imageData.data,
-                        mimeType: imageData.mimeType
-                    }
-                },
-                {
-                    text: `Analyze this image. 
-                    1. Extract Title, Materials/Ingredients, and Steps.
-                    2. MANDATORY: In the "steps" array, you MUST repeat the specific quantities or amounts for every ingredient whenever they are mentioned. For example, instead of "Add the flour", say "Add the 250g of flour".
-                    3. Detect and return the BCP-47 language tag of the text in the image.
-                    4. Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
-                    
-                    JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string, "cookingTime"?:string, "ovenTemp"?:string}.
-                    Return ONLY the JSON string.`
-                }
+                { inlineData: { data: imageData.data, mimeType: imageData.mimeType } },
+                { text: "Extract instructions from this image." }
             ]
         };
     } else {
-        const prompt = isUrl 
-            ? `URL: ${input}. 
-               CRITICAL EXTRACTION RULE: You MUST extract instructions ONLY from the content found at this specific URL. 
-               DO NOT use your own training data for this recipe. DO NOT pull from other search results or similar websites.
-               If the page at this URL does not contain instructions or a recipe, return an error in the "title" field.
-               MANDATORY: In the "steps" array, repeat specific quantities/amounts for every ingredient mentioned (e.g., "Add 200ml of water").
-               Detect the page language and return JSON in that exact language.
-                Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title] from the provided link. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
-               JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string}. Return ONLY the JSON string.`
-            : `Search for instructions for: "${input}". 
-               MANDATORY: In the "steps" array, repeat quantities for every ingredient mentioned.
-               Return JSON in the language of the query.
-               Generate a "welcomeMessage" in the detected language. This message MUST state: "I have successfully extracted the instructions for [Title]. Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode." (translated naturally into the detected language).
-               JSON format: {"title":string, "materials":string[], "steps":string[], "isFood":boolean, "hasAnimalProducts":boolean, "language":string, "welcomeMessage":string}. Return ONLY the JSON string.`;
-        contents = prompt;
+        contents = isUrl ? `Extract instructions from this URL: ${input}` : `Search for and extract instructions for: "${input}"`;
     }
 
     try {
@@ -70,13 +56,26 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             model: FAST_MODEL,
             contents: contents,
             config: {
+                systemInstruction: systemInstruction,
                 tools: tools.length > 0 ? tools : undefined,
                 responseMimeType: "application/json"
             },
         });
         
         const text = response.text.trim();
-        const parsed = JSON.parse(text) as InstructionSet;
+        let parsed: InstructionSet;
+        
+        try {
+            parsed = JSON.parse(text) as InstructionSet;
+        } catch (e) {
+            // Fallback: try to find JSON block if model returned extra text
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsed = JSON.parse(jsonMatch[0]) as InstructionSet;
+            } else {
+                throw new Error("Invalid JSON response from model");
+            }
+        }
         
         parsed.materials = parsed.materials || [];
         parsed.steps = parsed.steps || [];
@@ -97,7 +96,8 @@ export const getInstructions = async (input: string, imageData?: { data: string,
         }
         
         return parsed;
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Extraction error:", error);
         throw new Error("Failed to extract instructions exclusively from the provided source.");
     }
 };

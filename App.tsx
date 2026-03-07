@@ -19,8 +19,17 @@ const App: React.FC = () => {
     const [isAnswering, setIsAnswering] = useState<boolean>(false);
     const [isModifying, setIsModifying] = useState<boolean>(false);
     const [isEcoApplied, setIsEcoApplied] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [theme]);
     
     const safeSetError = useCallback((err: any) => {
         if (!err) {
@@ -690,6 +699,21 @@ const App: React.FC = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all text-text-secondary hover:text-white"
+                            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        >
+                            {theme === 'dark' ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                                </svg>
+                            )}
+                        </button>
                          <button onClick={() => setIsContinuousListening(prev => !prev)} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
                             <MicIcon className="w-5 h-5 text-white" />
                         </button>
@@ -700,9 +724,16 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-grow container mx-auto p-4 flex flex-col gap-4 max-w-4xl">
+            <main className={`flex-grow flex flex-col ${!instructionSet && !isLoading ? 'justify-center items-center' : 'container mx-auto p-4 gap-4 max-w-4xl'}`}>
                 {!instructionSet && !isLoading && (
-                    <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} />
+                    <div className="w-full max-w-2xl px-4 animate-fade-in -mt-20">
+                        <div className="flex flex-col items-center mb-8">
+                            <BotIcon className="w-16 h-16 text-accent mb-4" />
+                            <h1 className="text-4xl font-bold text-text-primary tracking-tight">AI Assistant</h1>
+                            <p className="text-text-secondary mt-2">Search recipes, instructions, or scan images</p>
+                        </div>
+                        <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} isLanding={true} />
+                    </div>
                 )}
                 
                 {instructionSet && !isLoading && (
