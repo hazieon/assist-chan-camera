@@ -50,7 +50,7 @@ const ChatMessage: React.FC<{
                             )}
                         </button>
                         {message.language && (
-                            <span className="text-[9px] uppercase font-mono opacity-40 bg-primary px-1 rounded border border-gray-700">
+                            <span className="text-[9px] uppercase font-mono opacity-40 bg-primary px-1 rounded border border-border-base">
                                 {message.language}
                             </span>
                         )}

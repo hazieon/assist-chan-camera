@@ -51,12 +51,12 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     const totalCount = instructionSet.steps.length;
 
     return (
-        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg border border-gray-800 animate-fade-in">
+        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg border border-border-base animate-fade-in">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 border-b border-gray-700 pb-6">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 border-b border-border-base pb-6">
                 <div className="flex-grow space-y-3">
                     <div className="flex items-center gap-3">
-                        <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
+                        <h2 className="text-2xl md:text-3xl font-bold leading-tight text-text-primary">
                             {instructionSet.title}
                         </h2>
                         {totalCount > 0 && (
@@ -167,7 +167,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     </div>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm md:text-base text-text-secondary">
                         {instructionSet.materials.map((material, index) => (
-                            <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg border border-gray-700/40">
+                            <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg border border-border-base/40">
                                 <span className="text-accent font-bold">•</span> {material}
                             </li>
                         ))}
@@ -215,7 +215,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             className={`flex items-start gap-4 p-4 rounded-xl transition-all border ${
                                 completedSteps[index] 
                                 ? 'bg-green-900/5 border-green-800/20 text-text-secondary italic line-through' 
-                                : 'bg-primary/30 border-gray-800 shadow-sm'
+                                : 'bg-primary/30 border-border-base shadow-sm'
                             }`}
                         >
                             <div className="flex-shrink-0 mt-1">
@@ -224,7 +224,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                     id={`step-${index}`}
                                     checked={completedSteps[index] ?? false}
                                     onChange={() => onToggleStep(index)}
-                                    className="h-5 w-5 rounded border-gray-700 bg-secondary text-accent focus:ring-accent cursor-pointer"
+                                    className="h-5 w-5 rounded border-border-base bg-secondary text-accent focus:ring-accent cursor-pointer"
                                 />
                             </div>
                             <label
@@ -241,7 +241,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
 
             {/* Reference Section */}
             {hasSources && (
-                <div className="mt-8 pt-6 border-t border-gray-800">
+                <div className="mt-8 pt-6 border-t border-border-base">
                     <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Grounding Sources</p>
                     <div className="flex flex-wrap gap-2">
                         {instructionSet.sources!.map((source, index) => (

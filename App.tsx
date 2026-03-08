@@ -13,24 +13,25 @@ import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
 import { MicIcon } from './components/icons/MicIcon';
 
 const App: React.FC = () => {
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
     const [instructionSet, setInstructionSet] = useState<InstructionSet | null>(null);
     const [originalInstructionSet, setOriginalInstructionSet] = useState<InstructionSet | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isAnswering, setIsAnswering] = useState<boolean>(false);
     const [isModifying, setIsModifying] = useState<boolean>(false);
     const [isEcoApplied, setIsEcoApplied] = useState<boolean>(false);
-    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-    const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
     const [error, setError] = useState<string | null>(null);
-
+    const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+    
+    // Dark Mode Effect
     useEffect(() => {
-        if (theme === 'dark') {
+        if (isDarkMode) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
-    }, [theme]);
-    
+    }, [isDarkMode]);
+
     const safeSetError = useCallback((err: any) => {
         if (!err) {
             setError(null);
@@ -687,11 +688,11 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-primary text-text-primary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
-            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20 border-b border-gray-800">
+            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20 border-b border-border-base">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BotIcon className="w-5 h-5 text-accent" />
-                        <h1 className="text-md md:text-lg font-bold tracking-tight text-white">Chef AI Assistant</h1>
+                        <h1 className="text-md md:text-lg font-bold tracking-tight text-text-primary">Chef AI Assistant</h1>
                         {instructionSet?.language && (
                             <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded border border-accent/30 ml-2 font-mono uppercase">
                                 {instructionSet.language}
@@ -699,18 +700,14 @@ const App: React.FC = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all text-text-secondary hover:text-white"
-                            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                        >
-                            {theme === 'dark' ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
+                        <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all" title="Toggle Theme">
+                            {isDarkMode ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-yellow-400">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
                                 </svg>
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-indigo-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                                 </svg>
                             )}
                         </button>
@@ -724,15 +721,12 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            <main className={`flex-grow flex flex-col ${!instructionSet && !isLoading ? 'justify-center items-center' : 'container mx-auto p-4 gap-4 max-w-4xl'}`}>
+            <main className="flex-grow container mx-auto p-4 flex flex-col gap-4 max-w-4xl">
                 {!instructionSet && !isLoading && (
-                    <div className="w-full max-w-2xl px-4 animate-fade-in -mt-20">
-                        <div className="flex flex-col items-center mb-8">
-                            <BotIcon className="w-16 h-16 text-accent mb-4" />
-                            <h1 className="text-4xl font-bold text-text-primary tracking-tight">AI Assistant</h1>
-                            <p className="text-text-secondary mt-2">Search recipes, instructions, or scan images</p>
+                    <div className="flex-grow flex flex-col items-center justify-center -mt-20">
+                        <div className="w-full max-w-2xl">
+                            <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} isLandingPage={true} />
                         </div>
-                        <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} isLanding={true} />
                     </div>
                 )}
                 
@@ -760,7 +754,7 @@ const App: React.FC = () => {
                 )}
                 
                 {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl border border-gray-800">
+                    <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl border border-border-base">
                         <div className="animate-spin h-10 w-10 border-2 border-accent border-t-transparent rounded-full"></div>
                         <p className="text-accent animate-pulse font-bold tracking-wide">SCRAPING SOURCE...</p>
                     </div>
@@ -793,7 +787,7 @@ const App: React.FC = () => {
                 )}
                 
                 {chatHistory.length > 0 && !isLoading && (
-                    <div className="bg-secondary p-4 rounded-xl shadow-inner border border-gray-800">
+                    <div className="bg-secondary p-4 rounded-xl shadow-inner border border-border-base">
                         <ChatInterface
                             chatHistory={chatHistory}
                             onSendMessage={handleSendMessage}

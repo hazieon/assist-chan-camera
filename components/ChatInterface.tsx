@@ -55,11 +55,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     return (
         <div className="flex flex-col h-[40vh] md:h-[50vh] min-h-[300px]">
-            <div className="flex items-center gap-2 mb-3 px-1">
-                <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
-                <h3 className="text-sm font-bold text-text-secondary uppercase tracking-widest">Personal Assistant</h3>
+            <div className="flex items-center justify-between mb-2 px-1">
+                <h3 className="text-sm font-bold text-accent uppercase tracking-widest">Personal Assistant</h3>
+                <div className="flex gap-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${isContinuousListening ? 'bg-red-500 animate-pulse' : 'bg-gray-600'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${isAnswering ? 'bg-accent animate-bounce' : 'bg-gray-600'}`} />
+                </div>
             </div>
-            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-3 bg-primary/40 rounded-xl space-y-4 scroll-smooth border border-gray-800/50">
+            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-3 bg-primary/40 rounded-xl space-y-4 scroll-smooth border border-border-base/50">
                 {chatHistory.map((msg, index) => (
                     <ChatMessage 
                         key={index} 
@@ -101,7 +104,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={isCookingMode ? "Chat disabled in Cooking Mode" : (isContinuousListening ? "Listening..." : "Speak to the assistant...")}
-                    className={`flex-grow p-3 pr-24 bg-primary border border-gray-700 rounded-lg focus:ring-2 focus:ring-accent focus:outline-none transition-all text-sm text-white ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex-grow p-3 pr-24 bg-primary border border-border-base rounded-lg focus:ring-2 focus:ring-accent focus:outline-none transition-all text-sm text-text-primary ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={isAnswering || !!pendingMod || isCookingMode}
                 />
                 <div className="absolute right-2 flex items-center gap-1">
