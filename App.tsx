@@ -688,13 +688,13 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-primary text-text-primary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
-            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20 border-b border-border-base">
+            <header className="bg-secondary p-3 shadow-md sticky top-0 z-20">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BotIcon className="w-5 h-5 text-accent" />
                         <h1 className="text-md md:text-lg font-bold tracking-tight text-text-primary">Chef AI Assistant</h1>
                         {instructionSet?.language && (
-                            <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded border border-accent/30 ml-2 font-mono uppercase">
+                            <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded ml-2 font-mono uppercase">
                                 {instructionSet.language}
                             </span>
                         )}
@@ -745,7 +745,7 @@ const App: React.FC = () => {
                 )}
 
                 {error && (
-                    <div className="bg-red-900/20 border border-red-900/50 text-red-200 p-4 rounded-xl animate-fade-in flex items-center gap-3">
+                    <div className="bg-red-900/20 text-red-200 p-4 rounded-xl animate-fade-in flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 shrink-0">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                         </svg>
@@ -754,7 +754,7 @@ const App: React.FC = () => {
                 )}
                 
                 {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl border border-border-base">
+                    <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl">
                         <div className="animate-spin h-10 w-10 border-2 border-accent border-t-transparent rounded-full"></div>
                         <p className="text-accent animate-pulse font-bold tracking-wide">SCRAPING SOURCE...</p>
                     </div>
@@ -787,7 +787,7 @@ const App: React.FC = () => {
                 )}
                 
                 {chatHistory.length > 0 && !isLoading && (
-                    <div className="bg-secondary p-4 rounded-xl shadow-inner border border-border-base">
+                    <div className="bg-secondary p-4 rounded-xl shadow-inner">
                         <ChatInterface
                             chatHistory={chatHistory}
                             onSendMessage={handleSendMessage}

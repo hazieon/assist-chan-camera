@@ -51,16 +51,16 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     const totalCount = instructionSet.steps.length;
 
     return (
-        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg border border-border-base animate-fade-in">
+        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg animate-fade-in">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 border-b border-border-base pb-6">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 pb-6">
                 <div className="flex-grow space-y-3">
                     <div className="flex items-center gap-3">
                         <h2 className="text-2xl md:text-3xl font-bold leading-tight text-text-primary">
                             {instructionSet.title}
                         </h2>
                         {totalCount > 0 && (
-                            <span className="shrink-0 bg-accent/10 text-accent text-[10px] font-bold px-2 py-1 rounded border border-accent/20 font-mono">
+                            <span className="shrink-0 bg-accent/10 text-accent text-[10px] font-bold px-2 py-1 rounded font-mono">
                                 {completedCount}/{totalCount}
                             </span>
                         )}
@@ -70,19 +70,19 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     {(instructionSet.cookingTime || instructionSet.ovenTemp || instructionSet.expiryDate) && (
                         <div className="flex flex-wrap gap-3 pt-1">
                             {instructionSet.cookingTime && (
-                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg border border-accent/20 text-xs">
+                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg text-xs">
                                     <ClockIcon className="w-3.5 h-3.5 text-accent" />
                                     <span>{instructionSet.cookingTime}</span>
                                 </div>
                             )}
                             {instructionSet.ovenTemp && (
-                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg border border-orange-500/20 text-xs text-orange-200">
+                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg text-xs text-orange-200">
                                     <FireIcon className="w-3.5 h-3.5 text-orange-500" />
                                     <span>{instructionSet.ovenTemp}</span>
                                 </div>
                             )}
                             {instructionSet.expiryDate && (
-                                <div className="flex items-center gap-2 bg-red-900/10 px-3 py-1.5 rounded-lg border border-red-500/20 text-xs text-red-300">
+                                <div className="flex items-center gap-2 bg-red-900/10 px-3 py-1.5 rounded-lg text-xs text-red-300">
                                     <CalendarIcon className="w-3.5 h-3.5 text-red-500" />
                                     <span>Expires: {instructionSet.expiryDate}</span>
                                 </div>
@@ -111,7 +111,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     <button
                         onClick={onStartCooking}
                         disabled={isModifying}
-                        className="flex items-center gap-2 bg-accent hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg border border-accent/20"
+                        className="flex items-center gap-2 bg-accent hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg"
                     >
                         <PlayIcon className="w-4 h-4" />
                         <span>START</span>
@@ -167,7 +167,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     </div>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm md:text-base text-text-secondary">
                         {instructionSet.materials.map((material, index) => (
-                            <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg border border-border-base/40">
+                            <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg">
                                 <span className="text-accent font-bold">•</span> {material}
                             </li>
                         ))}
@@ -212,10 +212,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     {instructionSet.steps.map((step, index) => (
                         <li 
                             key={index} 
-                            className={`flex items-start gap-4 p-4 rounded-xl transition-all border ${
+                            className={`flex items-start gap-4 p-4 rounded-xl transition-all ${
                                 completedSteps[index] 
-                                ? 'bg-green-900/5 border-green-800/20 text-text-secondary italic line-through' 
-                                : 'bg-primary/30 border-border-base shadow-sm'
+                                ? 'bg-green-900/5 text-text-secondary italic line-through' 
+                                : 'bg-primary/30 shadow-sm'
                             }`}
                         >
                             <div className="flex-shrink-0 mt-1">
@@ -224,7 +224,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                     id={`step-${index}`}
                                     checked={completedSteps[index] ?? false}
                                     onChange={() => onToggleStep(index)}
-                                    className="h-5 w-5 rounded border-border-base bg-secondary text-accent focus:ring-accent cursor-pointer"
+                                    className="h-5 w-5 rounded bg-secondary text-accent focus:ring-accent cursor-pointer border-none"
                                 />
                             </div>
                             <label
@@ -241,7 +241,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
 
             {/* Reference Section */}
             {hasSources && (
-                <div className="mt-8 pt-6 border-t border-border-base">
+                <div className="mt-8 pt-6">
                     <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Grounding Sources</p>
                     <div className="flex flex-wrap gap-2">
                         {instructionSet.sources!.map((source, index) => (
@@ -250,7 +250,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                 href={source.uri} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-[11px] bg-primary/40 px-3 py-1.5 rounded-lg text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all flex items-center gap-2"
+                                className="text-[11px] bg-primary/40 px-3 py-1.5 rounded-lg text-accent hover:bg-accent hover:text-white transition-all flex items-center gap-2"
                             >
                                 <ExternalLinkIcon className="w-3 h-3" />
                                 <span className="truncate max-w-[200px]">{source.title || 'Source'}</span>

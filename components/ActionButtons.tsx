@@ -38,7 +38,7 @@ const actionGroups = [
 const ActionButtons: React.FC<ActionButtonsProps> = ({ onModify, disabled }) => {
     return (
         <div className="bg-secondary p-4 rounded-lg shadow-lg animate-fade-in">
-             <h3 className="text-lg font-bold mb-4 text-accent border-b border-border-base pb-2">Quick Actions</h3>
+             <h3 className="text-lg font-bold mb-4 text-accent pb-2">Quick Actions</h3>
             <div className="flex flex-col md:flex-row gap-8">
                 {actionGroups.map((group) => (
                     <div key={group.title} className="flex-1">

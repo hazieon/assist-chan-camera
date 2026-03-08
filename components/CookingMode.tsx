@@ -43,7 +43,7 @@ const CookingMode: React.FC<CookingModeProps> = ({
     return (
         <div className="fixed inset-0 z-50 bg-primary flex flex-col animate-fade-in overflow-hidden">
             {/* Header - Sticky at top */}
-            <div className="p-4 md:p-6 border-b border-border-base flex items-center justify-between bg-secondary/80 backdrop-blur-md">
+            <div className="p-4 md:p-6 flex items-center justify-between bg-secondary/80 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                     <BotIcon className="w-6 h-6 text-accent" />
                     <h2 className="text-xs md:text-sm font-bold text-accent uppercase tracking-widest">Cooking Mode</h2>
@@ -88,13 +88,13 @@ const CookingMode: React.FC<CookingModeProps> = ({
                         </h3>
                     </div>
 
-                    <div className="flex items-center justify-center gap-4 p-4 bg-secondary/30 rounded-2xl border border-border-base/50 max-w-xs mx-auto">
+                    <div className="flex items-center justify-center gap-4 p-4 bg-secondary/30 rounded-2xl max-w-xs mx-auto">
                         <input
                             type="checkbox"
                             id={`cooking-step-${currentStepIndex}`}
                             checked={completedSteps[currentStepIndex] ?? false}
                             onChange={() => onToggleStep(currentStepIndex)}
-                            className="h-6 w-6 md:h-8 md:w-8 rounded-lg border-border-base bg-primary text-accent focus:ring-accent cursor-pointer transition-all"
+                            className="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-primary text-accent focus:ring-accent cursor-pointer transition-all border-none"
                         />
                         <label 
                             htmlFor={`cooking-step-${currentStepIndex}`}
@@ -107,7 +107,7 @@ const CookingMode: React.FC<CookingModeProps> = ({
             </div>
 
             {/* Controls - Sticky at bottom */}
-            <div className="p-6 md:p-10 bg-secondary/80 backdrop-blur-md border-t border-border-base">
+            <div className="p-6 md:p-10 bg-secondary/80 backdrop-blur-md">
                 <div className="max-w-3xl mx-auto">
                     <div className="flex items-center justify-between gap-4 md:gap-8">
                         <button 

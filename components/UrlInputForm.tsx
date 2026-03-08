@@ -185,14 +185,14 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
     };
 
     return (
-        <div className={`${isLandingPage ? 'bg-transparent border-none shadow-none' : 'bg-secondary p-6 rounded-lg shadow-lg border border-border-base'} animate-fade-in flex flex-col gap-4`}>
+        <div className={`${isLandingPage ? 'bg-transparent border-none shadow-none' : 'bg-secondary p-6 rounded-lg shadow-lg'} animate-fade-in flex flex-col gap-4`}>
             <div className={`flex flex-col gap-2 relative ${isLandingPage ? 'items-center text-center mb-4' : ''}`}>
                 <div className={`flex items-center justify-between ${isLandingPage ? 'flex-col gap-4' : ''}`}>
                     <h2 className={`${isLandingPage ? 'text-5xl md:text-7xl mb-2' : 'text-2xl'} font-bold text-accent tracking-tighter`}>Personal Assistant</h2>
                     {!isLandingPage && (
                         <button 
                             onClick={() => setShowInfo(!showInfo)}
-                            className={`p-1.5 rounded-full border transition-all ${showInfo ? 'bg-accent border-accent text-white' : 'border-border-base text-gray-500 hover:border-accent hover:text-accent'}`}
+                            className={`p-1.5 rounded-full transition-all ${showInfo ? 'bg-accent text-white' : 'text-gray-500 hover:text-accent'}`}
                             title="How it works"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -204,14 +204,14 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                 <p className={`${isLandingPage ? 'text-lg md:text-xl' : 'text-sm'} text-text-secondary`}>Search, paste a URL, or scan physical instructions</p>
                 
                 {showInfo && !isLandingPage && (
-                    <div className="mt-2 p-3 bg-primary/40 border border-accent/20 rounded-lg text-xs leading-relaxed text-text-secondary animate-fade-in">
+                    <div className="mt-2 p-3 bg-primary/40 rounded-lg text-xs leading-relaxed text-text-secondary animate-fade-in">
                         <span className="text-accent font-bold">Tech Insight:</span> To interpret the text from the image input, Gemini 3 uses a multimodal method (beyond traditional OCR) to locate, interpret and extract text. It is relatively successful at detecting small text and discerning the spatial and semantic hierarchy of instructions, enabling it to intelligently separate materials from preparation steps while capturing crucial metadata like oven temperatures and expiration dates that standard OCR often misses.
                     </div>
                 )}
             </div>
 
             {isCameraActive && (
-                <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border-2 border-accent/50 shadow-inner">
+                <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-inner">
                     <video 
                         ref={videoRef} 
                         autoPlay 
@@ -244,7 +244,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
             )}
 
             {isProcessingImage && (
-                <div className="flex flex-col items-center justify-center p-8 bg-primary/50 rounded-lg border border-accent/30 gap-4 animate-pulse">
+                <div className="flex flex-col items-center justify-center p-8 bg-primary/50 rounded-lg gap-4 animate-pulse">
                      <div className="flex items-center gap-3">
                         <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-accent font-bold text-lg">OCR: Scanning Image...</span>
@@ -261,7 +261,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder={isListening ? "Listening..." : "How to bake... or paste URL..."}
-                            className={`w-full ${isLandingPage ? 'p-5 text-lg' : 'p-4'} pr-24 bg-primary border border-border-base rounded-full focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder-gray-500 ${isListening ? 'border-accent shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'hover:border-gray-500 shadow-md'}`}
+                            className={`w-full ${isLandingPage ? 'p-5 text-lg' : 'p-4'} pr-24 bg-primary rounded-full focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder-gray-500 ${isListening ? 'shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'shadow-md'}`}
                             disabled={isLoading}
                             required
                         />
@@ -289,7 +289,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                     <div className={`flex justify-center ${isLandingPage ? 'mt-2' : ''}`}>
                         <button
                             type="submit"
-                            className={`${isLandingPage ? 'bg-secondary text-text-primary border border-border-base px-10 py-3' : 'bg-accent text-white px-8 py-3'} font-bold rounded-lg hover:border-accent transition-all active:scale-95 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px] shadow-lg`}
+                            className={`${isLandingPage ? 'bg-secondary text-text-primary px-10 py-3' : 'bg-accent text-white px-8 py-3'} font-bold rounded-lg hover:border-accent transition-all active:scale-95 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px] shadow-lg`}
                             disabled={isLoading || !inputValue.trim()}
                         >
                             {isLoading ? (

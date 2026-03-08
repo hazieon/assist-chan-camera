@@ -6,7 +6,7 @@ import { InstructionSet, ChatMessage, Role } from '../types';
 const getApiKey = () => {
     const key = process.env.GEMINI_API_KEY || 
                 process.env.API_KEY || 
-                (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
+                ((import.meta as any).env && (import.meta as any).env.VITE_GEMINI_API_KEY);
     return key;
 };
 
