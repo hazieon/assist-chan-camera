@@ -87,19 +87,39 @@ const App: React.FC = () => {
         if (!lang) return 'en-US';
         const clean = lang.toLowerCase().trim();
         
-        if (/^en|english/.test(clean)) return 'en-US';
-        if (/^es|spanish|español/.test(clean)) return 'es-ES';
-        if (/^fr|french|français/.test(clean)) return 'fr-FR';
-        if (/^it|italian|italiano/.test(clean)) return 'it-IT';
-        if (/^pt|portuguese|português/.test(clean)) return 'pt-BR';
-        if (/^de|german|deutsch/.test(clean)) return 'de-DE';
-        if (/^zh|chinese/.test(clean)) return 'zh-CN';
-        if (/^ja|japanese/.test(clean)) return 'ja-JP';
-        if (/^ko|korean/.test(clean)) return 'ko-KR';
-        if (/^ru|russian/.test(clean)) return 'ru-RU';
-        if (/^nl|dutch/.test(clean)) return 'nl-NL';
+        if (/^(en|english)/.test(clean)) return 'en-US';
+        if (/^(es|spanish|español)/.test(clean)) return 'es-ES';
+        if (/^(fr|french|français)/.test(clean)) return 'fr-FR';
+        if (/^(it|italian|italiano)/.test(clean)) return 'it-IT';
+        if (/^(pt|portuguese|português)/.test(clean)) return 'pt-BR';
+        if (/^(de|german|deutsch)/.test(clean)) return 'de-DE';
+        if (/^(zh|chinese)/.test(clean)) return 'zh-CN';
+        if (/^(ja|japanese)/.test(clean)) return 'ja-JP';
+        if (/^(ko|korean)/.test(clean)) return 'ko-KR';
+        if (/^(ru|russian)/.test(clean)) return 'ru-RU';
+        if (/^(nl|dutch)/.test(clean)) return 'nl-NL';
         
         return clean.replace('_', '-');
+    }, []);
+
+    const getTranslatedWelcome = useCallback((title: string, lang: string): string => {
+        const clean = lang.toLowerCase();
+        if (clean.startsWith('es')) {
+            return `He extraído con éxito las instrucciones para "${title}". Ten en cuenta que puedes usar el botón de 'versión eco' para ver una alternativa sostenible o usar las herramientas de conversión métrica para ajustar las unidades. Hazme cualquier pregunta o solicita cualquier cambio. Cuando estés listo para comenzar, presiona el botón de inicio para entrar en el modo manos libres.`;
+        }
+        if (clean.startsWith('fr')) {
+            return `J'ai extrait avec succès les instructions pour "${title}". Notez que vous pouvez utiliser le bouton 'version éco' pour voir une alternative durable ou utiliser les outils de conversion métrique pour ajuster les unités. Posez-moi des questions ou demandez des modifications. Lorsque vous êtes prêt à commencer, appuyez sur le bouton de démarrage pour passer en mode mains libres.`;
+        }
+        if (clean.startsWith('it')) {
+            return `Ho estratto con successo le istruzioni per "${title}". Tieni presente che puoi utilizzare il pulsante 'versione eco' per vedere un'alternativa sostenibile o utilizzare gli strumenti di conversione metrica per regolare le unità. Fammi qualsiasi domanda o chiedimi di apportare modifiche. Quando sei pronto per iniziare, premi il pulsante di avvio per passare alla modalità vivavoce.`;
+        }
+        if (clean.startsWith('de')) {
+            return `Ich habe die Anweisungen für "${title}" erfolgreich extrahiert. Beachten Sie, dass Sie die Schaltfläche 'Öko-Version' verwenden können, um eine nachhaltige Alternative zu sehen, oder die metrischen Konvertierungstools verwenden können, um die Einheiten anzupassen. Stellen Sie mir Fragen oder bitten Sie um Änderungen. Wenn Sie bereit sind zu beginnen, drücken Sie die Starttaste, um in den Freisprechmodus zu wechseln.`;
+        }
+        if (clean.startsWith('pt')) {
+            return `Extraí com sucesso as instruções para "${title}". Observe que você pode usar o botão 'versão eco' para ver uma alternativa sustentável ou usar as ferramentas de conversão métrica para ajustar as unidades. Faça-me qualquer pergunta ou peça para fazer alterações. Quando estiver pronto para começar, pressione o botão iniciar para entrar no modo mãos-livres.`;
+        }
+        return `I have successfully extracted the instructions for "${title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode.`;
     }, []);
 
     const primeSpeech = useCallback(() => {
@@ -186,7 +206,7 @@ const App: React.FC = () => {
             setCompletedSteps(new Array((data.steps || []).length).fill(false));
             
             const lang = getLangTag(data.language);
-            const welcomeMsg = data.welcomeMessage || `I have successfully extracted the instructions for "${data.title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode.`;
+            const welcomeMsg = data.welcomeMessage || getTranslatedWelcome(data.title, lang);
             
             setChatHistory([{ role: Role.ASSISTANT, content: welcomeMsg, language: lang }]);
             speak(welcomeMsg, undefined, lang);

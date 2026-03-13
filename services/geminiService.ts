@@ -80,6 +80,7 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             model: FAST_MODEL,
             contents: contents,
             config: {
+                systemInstruction: "You are a helpful assistant. Always respond in the detected language of the source material. Ensure the 'welcomeMessage' is translated naturally into that language.",
                 tools: tools.length > 0 ? tools : undefined,
                 responseMimeType: "application/json"
             },
