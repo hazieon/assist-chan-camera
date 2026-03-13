@@ -85,11 +85,20 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             },
         });
         
-        const text = response.text.trim();
+        const text = response.text?.trim() || "{}";
         const parsed = JSON.parse(text) as InstructionSet;
         
         parsed.materials = parsed.materials || [];
         parsed.steps = parsed.steps || [];
+
+        // Check for error conditions
+        const isError = !parsed.title || 
+                        parsed.title.toLowerCase().includes('error') || 
+                        parsed.steps.length === 0;
+
+        if (isError) {
+            parsed.welcomeMessage = "I couldn't find those instructions. Please check the input is correct.";
+        }
         
         if (!imageData) {
             const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
@@ -114,7 +123,7 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             throw new Error("API Access Forbidden (403). Please ensure the 'Generative Language API' is enabled in your Google Cloud Project and your API key is not restricted.");
         }
         
-        throw new Error("Failed to extract instructions. Please check your connection or the source content.");
+        throw new Error("I couldn't find those instructions. Please check the input is correct.");
     }
 };
 
@@ -129,7 +138,8 @@ export const detectModificationIntent = async (message: string, currentLang: str
             contents: prompt,
             config: { responseMimeType: "application/json" }
         });
-        return JSON.parse(response.text.trim());
+        const text = response.text?.trim() || "{}";
+        return JSON.parse(text);
     } catch (error) {
         return null;
     }
@@ -152,7 +162,8 @@ export const modifyInstructions = async (
             config: { responseMimeType: "application/json" }
         });
 
-        const parsed = JSON.parse(response.text.trim()) as InstructionSet;
+        const text = response.text?.trim() || "{}";
+        const parsed = JSON.parse(text) as InstructionSet;
         parsed.sources = instructions.sources;
         return parsed;
     } catch (error) {
@@ -199,7 +210,8 @@ export const getChatResponse = async (
                 responseMimeType: "application/json"
             }
         });
-        const parsed = JSON.parse(response.text.trim());
+        const text = response.text?.trim() || "{}";
+        const parsed = JSON.parse(text);
         return {
             text: parsed.text || "I'm sorry, I couldn't generate a response.",
             language: parsed.language || instructions.language || 'en-US'

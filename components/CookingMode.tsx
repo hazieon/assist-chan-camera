@@ -46,12 +46,12 @@ const CookingMode: React.FC<CookingModeProps> = ({
             <div className="p-4 md:p-6 flex items-center justify-between bg-secondary/80 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                     <BotIcon className="w-6 h-6 text-accent" />
-                    <h2 className="text-xs md:text-sm font-bold text-accent uppercase tracking-widest">Cooking Mode</h2>
+                    <h2 className="text-xs md:text-sm font-bold text-text-primary uppercase tracking-widest">Cooking Mode</h2>
                 </div>
                 <div className="flex items-center gap-3">
                     {isContinuousListening && (
                         <div className="hidden sm:flex items-center gap-2 mr-2">
-                            <div className={`w-2 h-2 rounded-full bg-red-500 ${isListening ? 'animate-pulse' : 'opacity-50'}`} />
+                            <div className={`w-2 h-2 rounded-full bg-error ${isListening ? 'animate-pulse' : 'opacity-50'}`} />
                             <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
                                 {isListening ? 'Listening' : 'Ready'}
                             </span>
@@ -59,14 +59,14 @@ const CookingMode: React.FC<CookingModeProps> = ({
                     )}
                     <button 
                         onClick={onToggleListening}
-                        className={`p-2.5 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 shadow-lg scale-110' : 'bg-primary hover:bg-gray-800'}`}
+                        className={`p-2.5 rounded-full transition-all ${isContinuousListening ? 'bg-error shadow-lg scale-110' : 'bg-primary hover:bg-gray-800'}`}
                         title={isContinuousListening ? "Turn off Mic" : "Turn on Mic"}
                     >
                         <MicIcon className="w-5 h-5 text-white" />
                     </button>
                     <button 
                         onClick={onExit}
-                        className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg transition-colors ml-2"
+                        className="bg-secondary hover:bg-secondary/80 text-text-primary px-3 py-1.5 rounded-lg transition-colors ml-2 border border-gray-300 dark:border-gray-600"
                     >
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Exit</span>
                     </button>
@@ -113,7 +113,7 @@ const CookingMode: React.FC<CookingModeProps> = ({
                         <button 
                             onClick={onBack}
                             disabled={isFirstStep}
-                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-gray-800 text-white font-bold hover:bg-gray-700 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
+                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-secondary text-text-primary font-bold hover:bg-secondary/80 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base border border-gray-300 dark:border-gray-600"
                         >
                             <UndoIcon className="w-5 h-5" />
                             <span className="hidden sm:inline">Back</span>
@@ -123,8 +123,8 @@ const CookingMode: React.FC<CookingModeProps> = ({
                             onClick={onTogglePause}
                             className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center transition-all shadow-2xl shrink-0 ${
                                 readingStatus === 'reading' 
-                                ? 'bg-orange-600 hover:bg-orange-500 scale-110' 
-                                : 'bg-green-600 hover:bg-green-500'
+                                ? 'bg-accent/70 hover:bg-accent scale-110' 
+                                : 'bg-accent hover:bg-accent/90'
                             }`}
                         >
                             {readingStatus === 'reading' ? (
@@ -137,7 +137,7 @@ const CookingMode: React.FC<CookingModeProps> = ({
                         <button 
                             onClick={onNext}
                             disabled={isLastStep}
-                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-accent text-white font-bold hover:bg-indigo-500 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
+                            className="flex-1 md:flex-none md:px-10 py-4 rounded-2xl bg-accent text-white font-bold hover:bg-accent/90 disabled:opacity-20 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
                         >
                             <span className="hidden sm:inline">Next</span>
                             <PlayIcon className="w-5 h-5" />

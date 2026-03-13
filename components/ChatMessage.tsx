@@ -23,7 +23,7 @@ const ChatMessage: React.FC<{
                 </div>
             )}
             
-            <div className={`relative max-w-[85%] md:max-w-lg p-3 md:p-4 rounded-2xl shadow-sm transition-all group ${
+            <div className={`relative max-w-[85%] md:max-w-lg p-3 md:p-4 rounded-2xl transition-all group border border-gray-300 dark:border-transparent shadow-md dark:shadow-sm ${
                 isAssistant ? 'bg-secondary rounded-tl-none' : 'bg-accent rounded-tr-none'
             }`}>
                 <p className="whitespace-pre-wrap text-sm md:text-base leading-relaxed">{message.content}</p>

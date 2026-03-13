@@ -173,8 +173,9 @@ const App: React.FC = () => {
         try {
             const data = await getInstructions(input, imageData);
             
-            if (data.title.toLowerCase().includes('error')) {
-                const errorMsg = data.welcomeMessage || data.title || "I was unable to fetch the instructions. Try again or try a different link.";
+            const isError = data.title.toLowerCase().includes('error') || (data.steps || []).length === 0;
+            if (isError) {
+                const errorMsg = data.welcomeMessage || "I couldn't find those instructions. Please check the input is correct.";
                 safeSetError(errorMsg);
                 speak(errorMsg);
                 setIsLoading(false);
@@ -190,7 +191,7 @@ const App: React.FC = () => {
             setChatHistory([{ role: Role.ASSISTANT, content: welcomeMsg, language: lang }]);
             speak(welcomeMsg, undefined, lang);
         } catch (e: any) {
-            const errorMsg = "I was unable to fetch the instructions. Try again or try a different link.";
+            const errorMsg = "I couldn't find those instructions. Please check the input is correct.";
             safeSetError(e);
             speak(errorMsg);
         } finally {
@@ -687,7 +688,7 @@ const App: React.FC = () => {
     }, [isContinuousListening]);
 
     return (
-        <div className="min-h-screen bg-primary text-text-primary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
+        <div className="min-h-screen bg-primary text-text-secondary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
             <header className="bg-secondary p-3 shadow-md sticky top-0 z-20">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -702,16 +703,16 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all" title="Toggle Theme">
                             {isDarkMode ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-yellow-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-accent">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
                                 </svg>
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-indigo-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-accent">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                                 </svg>
                             )}
                         </button>
-                         <button onClick={() => setIsContinuousListening(prev => !prev)} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-red-600 scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
+                         <button onClick={() => setIsContinuousListening(prev => !prev)} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
                             <MicIcon className="w-5 h-5 text-white" />
                         </button>
                         <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary">
@@ -734,7 +735,7 @@ const App: React.FC = () => {
                     <div className="flex justify-end">
                         <button 
                             onClick={handleNewSearch}
-                            className="text-xs font-bold text-accent uppercase tracking-widest hover:text-indigo-400 flex items-center gap-2 transition-all"
+                            className="text-xs font-bold text-accent uppercase tracking-widest hover:text-accent/80 flex items-center gap-2 transition-all"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -745,7 +746,7 @@ const App: React.FC = () => {
                 )}
 
                 {error && (
-                    <div className="bg-red-900/20 text-red-200 p-4 rounded-xl animate-fade-in flex items-center gap-3">
+                    <div className="bg-error/20 text-error p-4 rounded-xl animate-fade-in flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 shrink-0">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                         </svg>

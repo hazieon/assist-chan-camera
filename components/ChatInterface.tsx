@@ -56,13 +56,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return (
         <div className="flex flex-col h-[40vh] md:h-[50vh] min-h-[300px]">
             <div className="flex items-center justify-between mb-2 px-1">
-                <h3 className="text-sm font-bold text-accent uppercase tracking-widest">Personal Assistant</h3>
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest">Personal Assistant</h3>
                 <div className="flex gap-1">
-                    <div className={`w-1.5 h-1.5 rounded-full ${isContinuousListening ? 'bg-red-500 animate-pulse' : 'bg-gray-600'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${isContinuousListening ? 'bg-error animate-pulse' : 'bg-gray-600'}`} />
                     <div className={`w-1.5 h-1.5 rounded-full ${isAnswering ? 'bg-accent animate-bounce' : 'bg-gray-600'}`} />
                 </div>
             </div>
-            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-3 bg-primary/40 rounded-xl space-y-4 scroll-smooth">
+            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-3 bg-secondary rounded-xl space-y-4 scroll-smooth border border-gray-300 dark:border-transparent shadow-inner">
                 {chatHistory.map((msg, index) => (
                     <ChatMessage 
                         key={index} 
@@ -80,10 +80,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         </div>
                         <p className="text-sm font-medium italic text-text-primary">"{pendingMod.summary}"</p>
                         <div className="flex gap-2">
-                            <button onClick={onConfirmMod} className="flex-1 bg-accent text-white py-2 px-4 rounded-lg font-bold hover:bg-indigo-500 transition-all text-sm shadow-md">
+                            <button onClick={onConfirmMod} className="flex-1 bg-accent text-white py-2 px-4 rounded-lg font-bold hover:bg-accent/90 transition-all text-sm shadow-md">
                                 Confirm
                             </button>
-                            <button onClick={onCancelMod} className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg font-bold hover:bg-gray-600 transition-all text-sm">
+                            <button onClick={onCancelMod} className="flex-1 bg-secondary text-text-primary py-2 px-4 rounded-lg font-bold hover:bg-secondary/80 transition-all text-sm border border-gray-300 dark:border-gray-600">
                                 Cancel
                             </button>
                         </div>
@@ -112,7 +112,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         type="button"
                         onClick={onToggleListening}
                         title={isCookingMode ? "Voice commands only" : "Voice Input"}
-                        className={`p-2 rounded-lg transition-all ${isContinuousListening ? 'bg-red-600 text-white' : 'text-accent hover:bg-gray-800'} ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`p-2 rounded-lg transition-all ${isContinuousListening ? 'bg-error text-white' : 'text-accent hover:bg-gray-800'} ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isAnswering || !!pendingMod || isCookingMode}
                     >
                         <MicIcon className="w-5 h-5" />
@@ -120,7 +120,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <button 
                         type="submit" 
                         title="Send Message"
-                        className="p-2 bg-accent rounded-lg hover:bg-indigo-500 transition-all shadow-lg text-white disabled:opacity-30" 
+                        className="p-2 bg-accent rounded-lg hover:bg-accent/90 transition-all shadow-lg text-white disabled:opacity-30" 
                         disabled={!message.trim() || isAnswering || !!pendingMod || isCookingMode}
                     >
                         <SendIcon className="w-5 h-5" />

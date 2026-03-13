@@ -51,7 +51,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     const totalCount = instructionSet.steps.length;
 
     return (
-        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg animate-fade-in">
+        <div className="bg-secondary p-5 md:p-6 rounded-xl shadow-lg animate-fade-in border border-gray-300 dark:border-transparent">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 pb-6">
                 <div className="flex-grow space-y-3">
@@ -76,14 +76,14 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                 </div>
                             )}
                             {instructionSet.ovenTemp && (
-                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg text-xs text-orange-200">
-                                    <FireIcon className="w-3.5 h-3.5 text-orange-500" />
+                                <div className="flex items-center gap-2 bg-primary/50 px-3 py-1.5 rounded-lg text-xs">
+                                    <FireIcon className="w-3.5 h-3.5 text-accent" />
                                     <span>{instructionSet.ovenTemp}</span>
                                 </div>
                             )}
                             {instructionSet.expiryDate && (
-                                <div className="flex items-center gap-2 bg-red-900/10 px-3 py-1.5 rounded-lg text-xs text-red-300">
-                                    <CalendarIcon className="w-3.5 h-3.5 text-red-500" />
+                                <div className="flex items-center gap-2 bg-error/10 px-3 py-1.5 rounded-lg text-xs text-error">
+                                    <CalendarIcon className="w-3.5 h-3.5 text-error" />
                                     <span>Expires: {instructionSet.expiryDate}</span>
                                 </div>
                             )}
@@ -97,7 +97,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                 href={instructionSet.sources![0].uri}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-accent hover:text-indigo-400 text-sm font-bold underline underline-offset-4 decoration-accent/30 transition-all"
+                                className="inline-flex items-center gap-2 text-accent hover:text-accent/80 text-sm font-bold underline underline-offset-4 decoration-accent/30 transition-all"
                             >
                                 <ExternalLinkIcon className="w-4 h-4" />
                                 <span>Visit Source Page</span>
@@ -111,7 +111,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     <button
                         onClick={onStartCooking}
                         disabled={isModifying}
-                        className="flex items-center gap-2 bg-accent hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg"
+                        className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg"
                     >
                         <PlayIcon className="w-4 h-4" />
                         <span>START</span>
@@ -130,7 +130,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onEcoSwitch}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
+                                className="flex items-center gap-2 bg-eco hover:bg-eco/90 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
                                 title="Switch to eco version"
                             >
                                 <LeafIcon className="w-5 h-5 text-white animate-pulse" />
@@ -143,13 +143,13 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
 
             {/* Materials Section */}
             {hasMaterials && (
-                <section className="mb-8">
+                <section className="mb-8 border border-gray-300 dark:border-transparent p-4 rounded-xl shadow-sm">
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                        <h3 className="text-sm font-bold text-accent uppercase tracking-widest opacity-80">Materials & Ingredients</h3>
+                        <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest opacity-80">Materials & Ingredients</h3>
                         {isReadingMaterials ? (
                             <button
                                 onClick={onStopReading}
-                                className="flex items-center gap-2 bg-red-600/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-all text-xs"
+                                className="flex items-center gap-2 bg-error/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-error transition-all text-xs"
                             >
                                 <StopIcon className="w-4 h-4" />
                                 Stop Reading
@@ -158,7 +158,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onReadMaterials}
                                 disabled={isMuted}
-                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 transition-all text-xs disabled:opacity-40"
+                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent transition-all text-xs disabled:opacity-40"
                             >
                                 <PlayIcon className="w-4 h-4" />
                                 read aloud
@@ -176,18 +176,18 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             )}
 
             {/* Instructions Section */}
-            <section>
+            <section className="border border-gray-300 dark:border-transparent p-4 rounded-xl shadow-sm">
                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-                    <h3 className="text-sm font-bold text-accent uppercase tracking-widest opacity-80">Steps (with repeated quantities)</h3>
+                    <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest opacity-80">Steps (with repeated quantities)</h3>
                     <button
                         onClick={onReadInstructions}
                         disabled={isMuted || (readingStatus === 'idle' && allStepsCompleted)}
                         className={`flex items-center gap-2 font-bold py-2 px-4 rounded-lg transition-all text-xs disabled:opacity-40 shadow-md ${
                             readingStatus === 'reading' 
-                            ? 'bg-orange-600 hover:bg-orange-500 text-white' 
+                            ? 'bg-accent/70 hover:bg-accent text-white' 
                             : readingStatus === 'paused'
-                            ? 'bg-green-600 hover:bg-green-500 text-white'
-                            : 'bg-accent hover:bg-indigo-500 text-white'
+                            ? 'bg-accent/50 hover:bg-accent text-white'
+                            : 'bg-accent hover:bg-accent/90 text-white'
                         }`}
                     >
                         {readingStatus === 'reading' ? (
@@ -212,10 +212,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     {instructionSet.steps.map((step, index) => (
                         <li 
                             key={index} 
-                            className={`flex items-start gap-4 p-4 rounded-xl transition-all ${
+                            className={`flex items-start gap-4 p-4 rounded-lg transition-all border border-gray-300 dark:border-transparent shadow-md dark:shadow-sm ${
                                 completedSteps[index] 
                                 ? 'bg-green-900/5 text-text-secondary italic line-through' 
-                                : 'bg-primary/30 shadow-sm'
+                                : 'bg-primary/30'
                             }`}
                         >
                             <div className="flex-shrink-0 mt-1">

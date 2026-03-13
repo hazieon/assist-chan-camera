@@ -185,10 +185,10 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
     };
 
     return (
-        <div className={`${isLandingPage ? 'bg-transparent border-none shadow-none' : 'bg-secondary p-6 rounded-lg shadow-lg'} animate-fade-in flex flex-col gap-4`}>
+        <div className={`${isLandingPage ? 'bg-transparent border-none shadow-none' : 'bg-secondary p-6 rounded-lg shadow-lg border border-gray-300 dark:border-transparent'} animate-fade-in flex flex-col gap-4`}>
             <div className={`flex flex-col gap-2 relative ${isLandingPage ? 'items-center text-center mb-4' : ''}`}>
                 <div className={`flex items-center justify-between ${isLandingPage ? 'flex-col gap-4' : ''}`}>
-                    <h2 className={`${isLandingPage ? 'text-5xl md:text-7xl mb-2' : 'text-2xl'} font-bold text-accent tracking-tighter`}>Personal Assistant</h2>
+                    <h2 className={`${isLandingPage ? 'text-5xl md:text-7xl mb-2' : 'text-2xl'} font-bold text-text-primary tracking-tighter`}>Personal Assistant</h2>
                     {!isLandingPage && (
                         <button 
                             onClick={() => setShowInfo(!showInfo)}
@@ -228,7 +228,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
                         <button 
                             onClick={captureImage}
-                            className="bg-accent text-white px-6 py-2 rounded-full font-bold shadow-lg active:scale-95 transition-all hover:bg-indigo-500 flex items-center gap-2"
+                            className="bg-accent text-white px-6 py-2 rounded-full font-bold shadow-lg active:scale-95 transition-all hover:bg-accent/90 flex items-center gap-2"
                         >
                             <CameraIcon className="w-5 h-5" />
                             Capture & Scan
@@ -261,7 +261,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder={isListening ? "Listening..." : "How to bake... or paste URL..."}
-                            className={`w-full ${isLandingPage ? 'p-5 text-lg' : 'p-4'} pr-24 bg-primary rounded-full focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder-gray-500 ${isListening ? 'shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'shadow-md'}`}
+                            className={`w-full ${isLandingPage ? 'p-5 text-lg' : 'p-4'} pr-24 bg-secondary rounded-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder-gray-500 ${isListening ? 'shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'shadow-md'}`}
                             disabled={isLoading}
                             required
                         />
@@ -278,7 +278,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                             <button
                                 type="button"
                                 onClick={toggleListening}
-                                className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'text-accent hover:bg-gray-700'}`}
+                                className={`p-2 rounded-full transition-all ${isListening ? 'bg-error text-white animate-pulse' : 'text-accent hover:bg-gray-700'}`}
                                 title="Voice Search"
                                 disabled={isLoading}
                             >
@@ -289,7 +289,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                     <div className={`flex justify-center ${isLandingPage ? 'mt-2' : ''}`}>
                         <button
                             type="submit"
-                            className={`${isLandingPage ? 'bg-secondary text-text-primary px-10 py-3' : 'bg-accent text-white px-8 py-3'} font-bold rounded-lg hover:border-accent transition-all active:scale-95 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px] shadow-lg`}
+                            className={`${isLandingPage ? 'bg-accent text-white px-10 py-3' : 'bg-accent text-white px-8 py-3'} font-bold rounded-lg hover:bg-accent/90 transition-all active:scale-95 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px] shadow-lg`}
                             disabled={isLoading || !inputValue.trim()}
                         >
                             {isLoading ? (
