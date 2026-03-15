@@ -71,6 +71,7 @@ const App: React.FC = () => {
     const [hasPrimed, setHasPrimed] = useState(false);
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
+    const [micPermissionState, setMicPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
     
     const isMutedRef = useRef(isMuted);
     isMutedRef.current = isMuted;
@@ -122,13 +123,34 @@ const App: React.FC = () => {
         return `I have successfully extracted the instructions for "${title}". Note that you can use the 'eco version' button to see a sustainable alternative or use the metric conversion tools to adjust the units. Ask me any questions or to make any changes. When you are ready to begin, press the start button to go into hands free mode.`;
     }, []);
 
-    const primeSpeech = useCallback(() => {
-        if (hasPrimed || !window.speechSynthesis) return;
-        const utterance = new SpeechSynthesisUtterance('');
-        utterance.volume = 0;
-        window.speechSynthesis.speak(utterance);
-        setHasPrimed(true);
-    }, [hasPrimed]);
+    const primeSpeech = useCallback(async () => {
+        if (!window.speechSynthesis) return;
+        
+        if (!hasPrimed) {
+            const utterance = new SpeechSynthesisUtterance('');
+            utterance.volume = 0;
+            window.speechSynthesis.speak(utterance);
+            setHasPrimed(true);
+        }
+
+        // Proactive microphone permission request
+        // This ensures the browser popup appears until the user makes a choice
+        if (micPermissionState !== 'granted' && micPermissionState !== 'denied') {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    setMicPermissionState('granted');
+                } catch (err: any) {
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        setMicPermissionState('denied');
+                    } else {
+                        setMicPermissionState('prompt');
+                    }
+                }
+            }
+        }
+    }, [hasPrimed, micPermissionState]);
 
     const speak = useCallback((text: string, onEnd?: () => void, langOverride?: string) => {
         if (!window.speechSynthesis || isMutedRef.current || !text) {
@@ -304,8 +326,24 @@ const App: React.FC = () => {
         setReadingStatus('idle');
     }, []);
 
-    const handleStartCooking = useCallback(() => {
+    const handleStartCooking = useCallback(async () => {
         if (!instructionSet) return;
+        
+        // Ensure mic permission before starting hands-free mode
+        if (micPermissionState !== 'granted') {
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    setMicPermissionState('granted');
+                }
+            } catch (err: any) {
+                setMicPermissionState('denied');
+                safeSetError("Hands-free mode requires microphone access. Please allow it in your browser settings to continue.");
+                return;
+            }
+        }
+
         primeSpeech();
         
         // Find next unchecked step
@@ -613,6 +651,7 @@ const App: React.FC = () => {
 
             if (event.error === 'not-allowed') {
                 setIsContinuousListening(false);
+                safeSetError("Microphone permission denied. Please enable it in your browser settings to use voice commands.");
             }
         };
 
@@ -667,6 +706,30 @@ const App: React.FC = () => {
             recognitionRef.current.lang = instructionSet?.language ? getLangTag(instructionSet.language) : 'en-US';
         }
     }, [instructionSet?.language, getLangTag]);
+
+    const handleToggleListening = useCallback(async () => {
+        if (!isContinuousListening) {
+            try {
+                // Explicitly request permission
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    setMicPermissionState('granted');
+                }
+                setIsContinuousListening(true);
+            } catch (err: any) {
+                console.error("Microphone permission error:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    setMicPermissionState('denied');
+                    safeSetError("Microphone access is blocked. Please click the lock icon in your browser's address bar to allow microphone access, then try again.");
+                } else {
+                    safeSetError("Could not access microphone. Please ensure it is connected and not in use by another app.");
+                }
+            }
+        } else {
+            setIsContinuousListening(false);
+        }
+    }, [isContinuousListening, safeSetError]);
 
     const handleNewSearch = useCallback(() => {
         handleStopReading();
@@ -732,7 +795,7 @@ const App: React.FC = () => {
                                 </svg>
                             )}
                         </button>
-                         <button onClick={() => setIsContinuousListening(prev => !prev)} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
+                         <button onClick={handleToggleListening} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
                             <MicIcon className="w-5 h-5 text-white" />
                         </button>
                         <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary">
@@ -815,7 +878,7 @@ const App: React.FC = () => {
                             isAnswering={isAnswering || isModifying}
                             isCookingMode={isCookingMode}
                             isContinuousListening={isContinuousListening}
-                            onToggleListening={() => setIsContinuousListening(!isContinuousListening)}
+                            onToggleListening={handleToggleListening}
                             isMuted={isMuted}
                             speakingMessageIndex={speakingMessageIndex}
                             onToggleMessageSpeech={toggleMessageSpeech}
@@ -836,7 +899,7 @@ const App: React.FC = () => {
                     readingStatus={readingStatus}
                     isListening={isListening}
                     isContinuousListening={isContinuousListening}
-                    onToggleListening={() => setIsContinuousListening(!isContinuousListening)}
+                    onToggleListening={handleToggleListening}
                     onNext={() => {
                         if (currentReadingStep < instructionSet.steps.length - 1) {
                             handleStopReading();

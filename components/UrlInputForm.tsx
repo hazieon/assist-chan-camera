@@ -19,6 +19,8 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
     const [isProcessingImage, setIsProcessingImage] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
     
+    const [camPermissionState, setCamPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
+    
     const recognitionRef = useRef<any>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -83,31 +85,55 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
             if (!isCameraActive) return;
 
             try {
+                // Request permissions explicitly first if needed, or just try with constraints
                 const constraints = { 
                     video: { 
                         facingMode: { ideal: 'environment' },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
                     } 
                 };
                 
-                activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-                streamRef.current = activeStream;
+                // On some mobile browsers, specifically requesting environment camera is better
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                activeStream = stream;
+                streamRef.current = stream;
+                setCamPermissionState('granted');
 
                 if (videoRef.current) {
-                    videoRef.current.srcObject = activeStream;
-                }
-            } catch (err) {
-                console.error("Error accessing camera:", err);
-                try {
-                    activeStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    streamRef.current = activeStream;
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = activeStream;
+                    videoRef.current.srcObject = stream;
+                    // Ensure video plays on mobile
+                    videoRef.current.setAttribute('playsinline', 'true');
+                    try {
+                        await videoRef.current.play();
+                    } catch (playErr) {
+                        console.error("Video play failed:", playErr);
                     }
-                } catch (retryErr) {
+                }
+            } catch (err: any) {
+                console.error("Error accessing camera:", err);
+                
+                // Fallback to any video device
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    activeStream = fallbackStream;
+                    streamRef.current = fallbackStream;
+                    setCamPermissionState('granted');
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = fallbackStream;
+                        videoRef.current.setAttribute('playsinline', 'true');
+                        await videoRef.current.play();
+                    }
+                } catch (retryErr: any) {
                     console.error("Camera retry failed:", retryErr);
-                    alert("Could not access camera. Please check permissions.");
+                    let errorMsg = "Could not access camera.";
+                    if (retryErr.name === 'NotAllowedError' || retryErr.name === 'PermissionDeniedError') {
+                        setCamPermissionState('denied');
+                        errorMsg = "Camera access is blocked. Please enable it in your browser settings (usually by clicking the lock icon in the address bar) to scan instructions.";
+                    } else if (retryErr.name === 'NotFoundError' || retryErr.name === 'DevicesNotFoundError') {
+                        errorMsg = "No camera found on this device.";
+                    }
+                    alert(errorMsg);
                     setIsCameraActive(false);
                 }
             }
@@ -148,8 +174,26 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
         }
     };
 
-    const toggleCamera = () => {
-        setIsCameraActive(prev => !prev);
+    const toggleCamera = async () => {
+        if (!isCameraActive) {
+            // Proactive camera permission request
+            if (camPermissionState !== 'granted' && camPermissionState !== 'denied') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    setCamPermissionState('granted');
+                } catch (err: any) {
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        setCamPermissionState('denied');
+                        alert("Camera access is blocked. Please allow it in your browser settings to use the scanner.");
+                        return;
+                    }
+                }
+            }
+            setIsCameraActive(true);
+        } else {
+            setIsCameraActive(false);
+        }
     };
 
     const stopCamera = () => {
