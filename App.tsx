@@ -1088,10 +1088,10 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext }) => {
     const [coords, setCoords] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
     const steps = [
-        { id: 'recipe-input', text: "The search bar you can type your recipe search or paste a url here" },
-        { id: 'mic-btn', text: "microphone to input - say what you want!" },
-        { id: 'camera-btn', text: "camera to scan a recipe from a book or packaging, or even... take a photo of a dish and we can reverse engineer how to cook it" },
-        { id: 'search-btn', text: "click search when ready!" }
+        { id: 'recipe-input', text: "Search for a recipe or paste a URL to get started." },
+        { id: 'mic-btn', text: "Tap to search or ask questions hands-free." },
+        { id: 'camera-btn', text: "Scan cookbook pages or food photos to digitise." },
+        { id: 'search-btn', text: "Click to generate your interactive recipe." }
     ];
 
     useEffect(() => {
@@ -1156,7 +1156,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext }) => {
                                         // Skip to end
                                         for(let i=step; i<4; i++) onNext();
                                     }}
-                                    className="text-white/70 hover:text-white text-[10px] uppercase font-bold tracking-wider px-2"
+                                    className="text-white/70 hover:text-white text-xs uppercase font-bold tracking-wider px-2"
                                 >
                                     Skip Tutorial
                                 </button>

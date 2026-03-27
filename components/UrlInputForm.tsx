@@ -294,7 +294,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                 
                 {showInfo && !isLandingPage && (
                     <div className="mt-2 p-3 bg-primary/40 rounded-lg text-xs leading-relaxed text-text-secondary animate-fade-in">
-                        <span className="text-accent font-bold">Tech Insight:</span> To interpret the text from the image input, Gemini 3 uses a multimodal method (beyond traditional OCR) to locate, interpret and extract text. It is relatively successful at detecting small text and discerning the spatial and semantic hierarchy of instructions, enabling it to intelligently separate materials from preparation steps while capturing crucial metadata like oven temperatures and expiration dates that standard OCR often misses.
+                        <span className="text-accent font-bold">Tech Insight:</span> Gemini 3 uses multimodal AI to intelligently extract text, ingredients, and instructions from photos, capturing details like temperatures and dates that standard OCR misses.
                     </div>
                 )}
             </div>
