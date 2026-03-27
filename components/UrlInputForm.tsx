@@ -300,7 +300,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
             </div>
 
             {suggestions.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex overflow-x-auto no-scrollbar gap-2 mb-2 pb-2 w-full max-w-full">
                     {suggestions.map((suggestion, idx) => (
                         <button
                             key={idx}
@@ -308,7 +308,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                                 setInputValue(suggestion);
                                 onFetch(suggestion);
                             }}
-                            className="bg-accent text-white hover:bg-white hover:text-accent text-xs px-3 py-1.5 rounded-full border border-accent transition-all active:scale-95 whitespace-nowrap shadow-sm"
+                            className="bg-accent text-white hover:bg-white hover:text-accent text-xs px-3 py-1.5 rounded-full border border-accent transition-all active:scale-95 whitespace-nowrap shadow-sm flex-shrink-0"
                         >
                             {suggestion}
                         </button>

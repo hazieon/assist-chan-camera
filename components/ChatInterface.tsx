@@ -4,10 +4,12 @@ import { ChatMessage as ChatMessageType } from '../types';
 import ChatMessage from './ChatMessage';
 import { MicIcon } from './icons/MicIcon';
 import { SendIcon } from './icons/SendIcon';
+import { CameraIcon } from './icons/CameraIcon';
+import { StopIcon } from './icons/StopIcon';
 
 interface ChatInterfaceProps {
     chatHistory: ChatMessageType[];
-    onSendMessage: (message: string) => void;
+    onSendMessage: (message: string, image?: string) => void;
     isAnswering: boolean;
     isCookingMode: boolean;
     isContinuousListening: boolean;
@@ -39,7 +41,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     suggestions = []
 }) => {
     const [message, setMessage] = useState('');
+    const [image, setImage] = useState<string | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -47,16 +51,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
     }, [chatHistory]);
     
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = (reader.result as string).split(',')[1];
+                setImage(base64);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeImage = () => {
+        setImage(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (message.trim() && !isAnswering) {
-            onSendMessage(message);
+        if ((message.trim() || image) && !isAnswering) {
+            onSendMessage(message, image || undefined);
             setMessage('');
+            setImage(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
     return (
-        <div className="flex flex-col h-[40vh] md:h-[50vh] min-h-[300px]">
+        <div className="flex flex-col h-[65vh] md:h-[50vh] min-h-[400px]">
             <div className="flex items-center justify-between mb-4 px-1">
                 <div className="flex flex-col">
                     <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-text-primary uppercase tracking-tighter flex items-center gap-3">
@@ -107,7 +130,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             
             <div className="flex flex-col gap-4">
                 {suggestions.length > 0 && !isCookingMode && (
-                    <div className="flex flex-wrap gap-2 mb-1">
+                    <div className="flex overflow-x-auto no-scrollbar gap-2 mb-1 pb-2 w-full max-w-full">
                         {suggestions.map((suggestion, idx) => (
                             <button
                                 key={idx}
@@ -116,7 +139,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                         onSendMessage(suggestion);
                                     }
                                 }}
-                                className="bg-accent text-white hover:bg-white hover:text-accent text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-accent transition-all active:scale-95 whitespace-nowrap shadow-sm"
+                                className="bg-accent text-white hover:bg-white hover:text-accent text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-accent transition-all active:scale-95 whitespace-nowrap shadow-sm flex-shrink-0"
                             >
                                 {suggestion}
                             </button>
@@ -124,34 +147,78 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </div>
                 )}
                 
-                <form onSubmit={handleSubmit} className="flex items-center gap-2 relative">
-                    <input
-                        type="text"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder={isCookingMode ? "Chat disabled in Cooking Mode" : (isContinuousListening ? "Listening..." : "e.g. Make it gluten free...")}
-                        className={`flex-grow p-5 pr-24 bg-primary rounded-full border-2 border-gray-300 dark:border-gray-600 focus:ring-4 focus:ring-accent/30 focus:outline-none transition-all text-lg text-text-primary shadow-xl ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={isAnswering || !!pendingMod || isCookingMode}
-                        enterKeyHint="send"
-                    />
-                    <div className="absolute right-4 flex items-center gap-1">
-                        <button 
-                            type="button"
-                            onClick={onToggleListening}
-                            title={isCookingMode ? "Voice commands only" : "Voice Input"}
-                            className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-error text-white' : 'text-accent hover:bg-gray-800'} ${isCookingMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    {image && (
+                        <div className="relative w-24 h-24 mb-1 group">
+                            <img 
+                                src={`data:image/jpeg;base64,${image}`} 
+                                alt="Preview" 
+                                className="w-full h-full object-cover rounded-xl border-2 border-accent shadow-lg"
+                            />
+                            <button 
+                                type="button"
+                                onClick={removeImage}
+                                className="absolute -top-2 -right-2 bg-error text-white p-1.5 rounded-full shadow-xl hover:scale-110 transition-all z-10"
+                            >
+                                <StopIcon className="w-3 h-3" />
+                            </button>
+                        </div>
+                    )}
+                    
+                    <div className="bg-primary rounded-2xl border-2 border-gray-300 dark:border-gray-600 focus-within:ring-4 focus-within:ring-accent/30 transition-all shadow-2xl overflow-hidden">
+                        <textarea
+                            rows={1}
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmit(e as any);
+                                }
+                            }}
+                            placeholder={isCookingMode ? "Chat disabled" : (isContinuousListening ? "Listening..." : "Ask a question...")}
+                            className="w-full bg-transparent border-none focus:ring-0 text-base md:text-lg text-text-primary py-4 px-5 resize-none min-h-[60px] max-h-32"
                             disabled={isAnswering || !!pendingMod || isCookingMode}
-                        >
-                            <MicIcon className="w-6 h-6" />
-                        </button>
-                        <button 
-                            type="submit" 
-                            title="Send Message"
-                            className="p-2 bg-accent rounded-full hover:bg-accent/90 transition-all shadow-lg text-white disabled:opacity-30" 
-                            disabled={!message.trim() || isAnswering || !!pendingMod || isCookingMode}
-                        >
-                            <SendIcon className="w-6 h-6" />
-                        </button>
+                        />
+                        
+                        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/30 px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageChange}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    title="Add Photo"
+                                    className="p-3 text-accent hover:bg-accent/10 rounded-xl transition-all active:scale-95"
+                                    disabled={isAnswering || !!pendingMod || isCookingMode}
+                                >
+                                    <CameraIcon className="w-6 h-6" />
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={onToggleListening}
+                                    title="Voice Input"
+                                    className={`p-3 rounded-xl transition-all active:scale-95 ${isContinuousListening ? 'bg-error text-white shadow-md' : 'text-accent hover:bg-accent/10'}`}
+                                    disabled={isAnswering || !!pendingMod || isCookingMode}
+                                >
+                                    <MicIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+                            
+                            <button 
+                                type="submit" 
+                                className="flex items-center gap-2 px-5 py-2.5 bg-accent rounded-xl hover:bg-accent/90 transition-all shadow-lg text-white font-black uppercase tracking-wider text-xs sm:text-sm disabled:opacity-30 active:scale-95" 
+                                disabled={(!message.trim() && !image) || isAnswering || !!pendingMod || isCookingMode}
+                            >
+                                <span className="hidden sm:inline">Send</span>
+                                <SendIcon className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

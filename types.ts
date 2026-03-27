@@ -23,4 +23,5 @@ export interface ChatMessage {
     role: Role;
     content: string;
     language?: string; // BCP-47 tag for this specific message
+    image?: string; // base64 encoded image
 }

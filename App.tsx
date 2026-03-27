@@ -547,7 +547,7 @@ const App: React.FC = () => {
         speak("Reverted to original.", undefined, lang);
     }, [originalInstructionSet, handleStopReading, speak, getLangTag]);
 
-    const handleSendMessage = useCallback(async (message: string) => {
+    const handleSendMessage = useCallback(async (message: string, image?: string) => {
         if (!instructionSet) return;
 
         const lowerMsg = message.toLowerCase().trim().replace(/[.,?!]/g, '');
@@ -671,16 +671,17 @@ const App: React.FC = () => {
         primeSpeech();
         setIsAnswering(true);
         handleStopReading();
-        setChatHistory(prev => [...prev, { role: Role.USER, content: message }]);
+        setChatHistory(prev => [...prev, { role: Role.USER, content: message, image }]);
 
         try {
-            const intent = await detectModificationIntent(message, instructionSet?.language || 'en-US');
+            // Only check for modification intent if there's no image
+            const intent = !image ? await detectModificationIntent(message, instructionSet?.language || 'en-US') : null;
             
             if (intent?.type === 'MODIFICATION' && instructionSet) {
                 setIsAnswering(false);
                 requestModification(message, intent.summary);
             } else {
-                const aiResult = await getChatResponse(instructionSet, chatHistory, message, completedSteps);
+                const aiResult = await getChatResponse(instructionSet, chatHistory, message, completedSteps, image);
                 const lang = getLangTag(aiResult.language);
                 
                 setChatHistory(prev => [...prev, { 
@@ -1002,7 +1003,7 @@ const App: React.FC = () => {
                 )}
                 
                 {instructionSet && !isLoading && (
-                    <div className="bg-secondary p-6 rounded-xl shadow-inner border border-gray-300 dark:border-transparent">
+                    <div className="bg-secondary p-4 sm:p-6 rounded-xl shadow-inner border border-gray-300 dark:border-transparent">
                         <ChatInterface
                             chatHistory={chatHistory}
                             onSendMessage={handleSendMessage}
