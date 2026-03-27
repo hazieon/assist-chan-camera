@@ -289,7 +289,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                     )}
                 </div>
                 <p className={`${isLandingPage ? 'text-base sm:text-lg md:text-xl' : 'text-xs sm:text-sm'} text-text-secondary`}>
-                    {isLandingPage ? 'Your personal cooking assistant' : 'Ask for adjustments, dietary swaps, or scaling'}
+                    {isLandingPage ? 'Your personal cooking assistant' : 'Ask for adjustments, dietary swaps, or other questions'}
                 </p>
                 
                 {showInfo && !isLandingPage && (

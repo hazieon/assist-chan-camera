@@ -172,7 +172,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                         {isReadingMaterials ? (
                             <button
                                 onClick={onStopReading}
-                                className="flex items-center gap-2 bg-error/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-error active:scale-95 transition-all text-xs touch-manipulation"
+                                className="flex items-center gap-2 bg-accent/70 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent active:scale-95 transition-all text-xs touch-manipulation shadow-md"
                             >
                                 <StopIcon className="w-4 h-4" />
                                 Stop Reading
@@ -181,7 +181,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onReadMaterials}
                                 disabled={isMuted}
-                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent active:scale-95 transition-all text-xs disabled:opacity-40 disabled:active:scale-100 touch-manipulation"
+                                className="flex items-center gap-2 bg-accent text-white font-bold py-2 px-4 rounded-lg hover:bg-accent/90 active:scale-95 transition-all text-xs disabled:opacity-40 disabled:active:scale-100 shadow-md touch-manipulation"
                             >
                                 <PlayIcon className="w-4 h-4" />
                                 Read aloud

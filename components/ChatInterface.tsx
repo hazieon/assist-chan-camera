@@ -62,7 +62,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-text-primary uppercase tracking-tighter flex items-center gap-3">
                         <span className="text-accent">CHAT</span> ASSISTANT
                     </h3>
-                    <p className="text-xs sm:text-sm text-text-secondary mt-1">Ask for adjustments, dietary swaps, or scaling</p>
+                    <p className="text-xs sm:text-sm text-text-secondary mt-1">Ask for adjustments, dietary swaps, or other questions</p>
                 </div>
                 <div className="flex gap-1">
                     <div className={`w-2 h-2 rounded-full ${isContinuousListening ? 'bg-error animate-pulse' : 'bg-gray-600'}`} />

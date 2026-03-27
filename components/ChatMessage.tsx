@@ -45,7 +45,7 @@ const ChatMessage: React.FC<{
                             ) : (
                                 <>
                                     <SpeakerIcon className="w-4 h-4 opacity-70 group-hover:opacity-100" />
-                                    <span>Read Aloud</span>
+                                    <span>Read aloud</span>
                                 </>
                             )}
                         </button>
