@@ -11,7 +11,7 @@ const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; children:
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="flex-1 bg-primary text-text-primary font-semibold py-2 px-4 rounded-md hover:bg-accent hover:text-white transition-colors disabled:bg-opacity-50 disabled:text-text-secondary disabled:cursor-not-allowed text-sm border border-gray-300 dark:border-transparent shadow-md dark:shadow-none"
+        className="flex-1 bg-primary text-text-primary font-semibold py-3 px-4 rounded-lg hover:bg-accent hover:text-white active:scale-95 transition-all disabled:bg-opacity-50 disabled:text-text-secondary disabled:cursor-not-allowed disabled:active:scale-100 text-sm border border-gray-300 dark:border-transparent shadow-md dark:shadow-none touch-manipulation"
     >
         {children}
     </button>
@@ -38,7 +38,6 @@ const actionGroups = [
 const ActionButtons: React.FC<ActionButtonsProps> = ({ onModify, disabled }) => {
     return (
         <div className="bg-secondary p-4 rounded-lg shadow-lg animate-fade-in border border-gray-300 dark:border-transparent">
-             <h3 className="text-lg font-bold mb-4 text-text-primary pb-2">Quick Actions</h3>
             <div className="flex flex-col md:flex-row gap-8">
                 {actionGroups.map((group) => (
                     <div key={group.title} className="flex-1">

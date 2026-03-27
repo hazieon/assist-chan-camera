@@ -66,9 +66,9 @@ const CookingMode: React.FC<CookingModeProps> = ({
                     </button>
                     <button 
                         onClick={onExit}
-                        className="bg-secondary hover:bg-secondary/80 text-text-primary px-3 py-1.5 rounded-lg transition-colors ml-2 border border-gray-300 dark:border-gray-600"
+                        className="bg-secondary hover:bg-secondary/80 text-text-primary px-4 py-2 rounded-xl transition-colors ml-2 border border-gray-300 dark:border-gray-600 shadow-sm active:scale-95"
                     >
-                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Exit</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </button>
                 </div>
             </div>
@@ -77,13 +77,13 @@ const CookingMode: React.FC<CookingModeProps> = ({
             <div className="flex-grow flex flex-col items-center justify-center p-6 md:p-12 text-center overflow-y-auto">
                 <div className="w-full max-w-3xl mx-auto">
                     <div className="mb-4 md:mb-8">
-                        <span className="text-accent font-mono text-sm md:text-lg font-bold bg-accent/10 px-4 py-1 rounded-full border border-accent/20">
+                        <span className="text-accent font-mono text-xs sm:text-sm md:text-lg font-bold bg-accent/10 px-4 py-1 rounded-full border border-accent/20">
                             Step {currentStepIndex + 1}/{instructionSet.steps.length}
                         </span>
                     </div>
                     
                     <div className="min-h-[150px] md:min-h-[200px] flex items-center justify-center mb-8 md:mb-12">
-                        <h3 className="text-xl md:text-4xl lg:text-5xl font-bold leading-tight text-text-primary">
+                        <h3 className="text-lg sm:text-xl md:text-3xl lg:text-5xl font-bold leading-tight text-text-primary">
                             {step}
                         </h3>
                     </div>

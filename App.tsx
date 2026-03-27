@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { InstructionSet, ChatMessage as ChatMessageType, Role } from './types';
 import { getInstructions, getChatResponse, modifyInstructions, detectModificationIntent } from './services/geminiService';
 import UrlInputForm from './components/UrlInputForm';
@@ -13,7 +13,15 @@ import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
 import { MicIcon } from './components/icons/MicIcon';
 
 const App: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+        try {
+            const saved = localStorage.getItem('theme');
+            if (saved) return saved === 'dark';
+            return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch (e) {
+            return false; // Default to light
+        }
+    });
     const [instructionSet, setInstructionSet] = useState<InstructionSet | null>(null);
     const [originalInstructionSet, setOriginalInstructionSet] = useState<InstructionSet | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -22,14 +30,77 @@ const App: React.FC = () => {
     const [isEcoApplied, setIsEcoApplied] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+    const [loadingText, setLoadingText] = useState<string>("gathering seasonings");
+    const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+
+    const loadingPhrases = [
+        "gathering seasonings",
+        "fetching spices",
+        "mixing sauces",
+        "preheating oven",
+        "chopping vegetables",
+        "simmering broth",
+        "whisking eggs",
+        "kneading dough",
+        "sautéing garlic",
+        "garnishing dish",
+        "marinating proteins",
+        "reducing glazes",
+        "zesting citrus",
+        "infusing oils",
+        "caramelising onions"
+    ];
+
+    // Randomized loading text effect
+    useEffect(() => {
+        if (isLoading) {
+            setLoadingText(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)]);
+            const interval = setInterval(() => {
+                setLoadingText(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)]);
+            }, 2500);
+            return () => clearInterval(interval);
+        }
+    }, [isLoading]);
+
+    // Tutorial initialisation
+    useEffect(() => {
+        const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+        if (!hasSeenTutorial) {
+            // Delay a bit to ensure elements are rendered
+            setTimeout(() => setTutorialStep(0), 1000);
+        }
+    }, []);
+
+    const nextTutorialStep = () => {
+        if (tutorialStep !== null) {
+            if (tutorialStep < 3) {
+                setTutorialStep(tutorialStep + 1);
+            } else {
+                setTutorialStep(null);
+                localStorage.setItem('hasSeenTutorial', 'true');
+            }
+        }
+    };
     
     // Dark Mode Effect
     useEffect(() => {
+        const root = document.documentElement;
         if (isDarkMode) {
-            document.documentElement.classList.add('dark');
+            root.classList.add('dark');
+            try { localStorage.setItem('theme', 'dark'); } catch (e) {}
         } else {
-            document.documentElement.classList.remove('dark');
+            root.classList.remove('dark');
+            try { localStorage.setItem('theme', 'light'); } catch (e) {}
         }
+        
+        // Update theme-color meta tag for mobile/tablet status bars
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (!metaThemeColor) {
+            metaThemeColor = document.createElement('meta');
+            metaThemeColor.setAttribute('name', 'theme-color');
+            document.head.appendChild(metaThemeColor);
+        }
+        metaThemeColor.setAttribute('content', isDarkMode ? '#2d333b' : '#f8f9fa');
     }, [isDarkMode]);
 
     const safeSetError = useCallback((err: any) => {
@@ -72,6 +143,8 @@ const App: React.FC = () => {
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
     const [micPermissionState, setMicPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
+    const [lastSearchInput, setLastSearchInput] = useState<string>('');
+    const [isKeywordSearch, setIsKeywordSearch] = useState<boolean>(false);
     
     const isMutedRef = useRef(isMuted);
     isMutedRef.current = isMuted;
@@ -211,6 +284,11 @@ const App: React.FC = () => {
         setPendingMod(null);
         stopReadingRef.current = true;
         setSpeakingMessageIndex(null);
+        
+        // Track if it's a keyword search
+        setLastSearchInput(input);
+        const isUrl = input.trim().toLowerCase().startsWith('http');
+        setIsKeywordSearch(!isUrl && !imageData);
 
         try {
             const data = await getInstructions(input, imageData);
@@ -239,7 +317,50 @@ const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [speak, primeSpeech, getLangTag]);
+    }, [speak, primeSpeech, getLangTag, safeSetError]);
+
+    const handleRegenerate = useCallback(() => {
+        if (lastSearchInput) {
+            handleFetchInstructions(lastSearchInput);
+        }
+    }, [lastSearchInput, handleFetchInstructions]);
+
+    const suggestions = useMemo(() => {
+        if (!instructionSet) return [];
+        const base = ["Make it gluten free", "Scale for 10 people"];
+        
+        // Pick a material to suggest a swap
+        if (instructionSet.materials && instructionSet.materials.length > 0) {
+            const commonSwaps: Record<string, string> = {
+                'butter': 'coconut oil',
+                'milk': 'oat milk',
+                'egg': 'flax egg',
+                'sugar': 'honey',
+                'flour': 'almond flour',
+                'chicken': 'tofu',
+                'beef': 'mushrooms',
+                'cream': 'cashew cream',
+                'cheese': 'nutritional yeast',
+                'pasta': 'zucchini noodles',
+                'rice': 'cauliflower rice'
+            };
+            
+            let foundSwap = false;
+            for (const material of instructionSet.materials) {
+                const lower = material.toLowerCase();
+                for (const [key, val] of Object.entries(commonSwaps)) {
+                    if (lower.includes(key)) {
+                        base.push(`Swap ${key} for ${val}`);
+                        foundSwap = true;
+                        break;
+                    }
+                }
+                if (foundSwap) break;
+            }
+        }
+        
+        return base.slice(0, 3);
+    }, [instructionSet]);
 
     const handleReadInstructions = useCallback((indexOverride?: number | any) => {
         if (!instructionSet || isMuted || !window.speechSynthesis) return;
@@ -586,7 +707,7 @@ const App: React.FC = () => {
         handleSendMessageRef.current = handleSendMessage;
     }, [handleSendMessage]);
 
-    // Global Speech Recognition Initialization
+    // Global Speech Recognition Initialisation
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
@@ -698,7 +819,7 @@ const App: React.FC = () => {
             isContinuousListeningRef.current = false;
             try { recognition.abort(); } catch (e) {}
         };
-    }, []); // Initialize once
+    }, []); // Initialise once
 
     // Update language when it changes
     useEffect(() => {
@@ -774,9 +895,11 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-primary text-text-secondary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
             <header className="bg-secondary p-3 shadow-md sticky top-0 z-20">
                 <div className="container mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <BotIcon className="w-5 h-5 text-accent" />
-                        <h1 className="text-md md:text-lg font-bold tracking-tight text-text-primary">Chef AI Assistant</h1>
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <BotIcon className="w-8 h-8 md:w-10 md:h-10 text-accent" />
+                        <h1 className="text-lg md:text-2xl font-black tracking-tighter text-text-primary uppercase">
+                            <span className="text-accent">CHEF</span> ASSISTANT
+                        </h1>
                         {instructionSet?.language && (
                             <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded ml-2 font-mono uppercase">
                                 {instructionSet.language}
@@ -784,7 +907,7 @@ const App: React.FC = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-primary/50 hover:bg-primary transition-all" title="Toggle Theme">
+                        <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-primary/50 hover:bg-primary active:scale-95 transition-all touch-manipulation" title="Toggle Theme">
                             {isDarkMode ? (
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-accent">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M3 12h2.25m.386-6.364 1.591-1.591M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
@@ -795,10 +918,10 @@ const App: React.FC = () => {
                                 </svg>
                             )}
                         </button>
-                         <button onClick={handleToggleListening} className={`p-2 rounded-full transition-all ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
+                         <button onClick={handleToggleListening} className={`p-2 rounded-full transition-all active:scale-95 touch-manipulation ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
                             <MicIcon className="w-5 h-5 text-white" />
                         </button>
-                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary">
+                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary active:scale-95 transition-all touch-manipulation">
                             {isMuted ? <SpeakerMuteIcon className="w-5 h-5 text-gray-500" /> : <SpeakerIcon className="w-5 h-5 text-accent" />}
                         </button>
                     </div>
@@ -809,7 +932,12 @@ const App: React.FC = () => {
                 {!instructionSet && !isLoading && (
                     <div className="flex-grow flex flex-col items-center justify-center -mt-20">
                         <div className="w-full max-w-2xl">
-                            <UrlInputForm onFetch={handleFetchInstructions} isLoading={isLoading || isModifying} isLandingPage={true} />
+                            <UrlInputForm 
+                                onFetch={handleFetchInstructions} 
+                                isLoading={isLoading || isModifying} 
+                                isLandingPage={true} 
+                                suggestions={suggestions}
+                            />
                         </div>
                     </div>
                 )}
@@ -818,7 +946,7 @@ const App: React.FC = () => {
                     <div className="flex justify-end">
                         <button 
                             onClick={handleNewSearch}
-                            className="text-xs font-bold text-accent uppercase tracking-widest hover:text-accent/80 flex items-center gap-2 transition-all"
+                            className="text-xs font-bold text-accent uppercase tracking-widest hover:text-accent/80 active:scale-95 flex items-center gap-2 transition-all touch-manipulation"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -840,7 +968,7 @@ const App: React.FC = () => {
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center py-12 gap-4 bg-secondary/30 rounded-xl">
                         <div className="animate-spin h-10 w-10 border-2 border-accent border-t-transparent rounded-full"></div>
-                        <p className="text-accent animate-pulse font-bold tracking-wide">SCRAPING SOURCE...</p>
+                        <p className="text-accent animate-pulse font-bold tracking-wide uppercase text-sm md:text-base">{loadingText}...</p>
                     </div>
                 )}
                 
@@ -860,18 +988,21 @@ const App: React.FC = () => {
                             readingStatus={readingStatus}
                             isReadingMaterials={isReadingMaterials}
                             isMuted={isMuted}
-                            onEcoSwitch={isCookingMode ? undefined : () => requestModification("Regenerate as a sustainable VEGAN version.", "Vegan conversion", true)}
-                            onRevert={isCookingMode ? undefined : handleRevertInstructions}
+                            onEcoSwitch={isCookingMode ? () => {} : () => requestModification("Regenerate as a sustainable VEGAN version.", "Vegan conversion", true)}
+                            onRevert={isCookingMode ? () => {} : handleRevertInstructions}
                             isModifying={isModifying}
                             isEcoApplied={isEcoApplied}
                             onStartCooking={handleStartCooking}
+                            isCookingMode={isCookingMode}
+                            isKeywordSearch={isKeywordSearch}
+                            onRegenerate={handleRegenerate}
+                            onModify={(p, s) => requestModification(p, s, true)}
                         />
-                        <ActionButtons onModify={(p, s) => requestModification(p, s, true)} disabled={isLoading || isAnswering || isModifying || isCookingMode} />
                     </div>
                 )}
                 
-                {chatHistory.length > 0 && !isLoading && (
-                    <div className="bg-secondary p-4 rounded-xl shadow-inner">
+                {instructionSet && !isLoading && (
+                    <div className="bg-secondary p-6 rounded-xl shadow-inner border border-gray-300 dark:border-transparent">
                         <ChatInterface
                             chatHistory={chatHistory}
                             onSendMessage={handleSendMessage}
@@ -886,6 +1017,7 @@ const App: React.FC = () => {
                             onConfirmMod={handleConfirmModification}
                             onCancelMod={handleCancelModification}
                             targetLang={instructionSet?.language}
+                            suggestions={suggestions}
                         />
                     </div>
                 )}
@@ -929,6 +1061,114 @@ const App: React.FC = () => {
                     }}
                 />
             )}
+            {/* Tutorial Overlay */}
+            {tutorialStep !== null && (
+                <TutorialOverlay step={tutorialStep} onNext={nextTutorialStep} />
+            )}
+
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+            `}</style>
+        </div>
+    );
+};
+
+interface TutorialOverlayProps {
+    step: number;
+    onNext: () => void;
+}
+
+const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext }) => {
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
+    const steps = [
+        { id: 'recipe-input', text: "The search bar you can type your recipe search or paste a url here" },
+        { id: 'mic-btn', text: "microphone to input - say what you want!" },
+        { id: 'camera-btn', text: "camera to scan a recipe from a book or packaging, or even... take a photo of a dish and we can reverse engineer how to cook it" },
+        { id: 'search-btn', text: "click search when ready!" }
+    ];
+
+    useEffect(() => {
+        const updateCoords = () => {
+            const el = document.getElementById(steps[step].id);
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                setCoords({
+                    top: rect.top + window.scrollY,
+                    left: rect.left + window.scrollX,
+                    width: rect.width,
+                    height: rect.height
+                });
+            }
+        };
+
+        updateCoords();
+        window.addEventListener('resize', updateCoords);
+        return () => window.removeEventListener('resize', updateCoords);
+    }, [step]);
+
+    if (!coords) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] pointer-events-none">
+            <div className="absolute inset-0 bg-black/40 pointer-events-auto" onClick={onNext}></div>
+            <div 
+                className="absolute transition-all duration-500 pointer-events-auto"
+                style={{
+                    top: coords.top - 10,
+                    left: coords.left - 10,
+                    width: coords.width + 20,
+                    height: coords.height + 20,
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
+                    borderRadius: '1rem',
+                    border: '2px solid white'
+                }}
+            ></div>
+            <div 
+                className="absolute z-[101] pointer-events-auto animate-float"
+                style={{
+                    top: step === 0 ? coords.top + coords.height + 20 : coords.top - 120,
+                    left: Math.max(20, Math.min(window.innerWidth - 300, coords.left + coords.width / 2 - 140)),
+                    width: '280px'
+                }}
+            >
+                <div className="bg-accent text-white p-4 rounded-2xl shadow-2xl relative">
+                    <p className="text-sm font-bold leading-tight">{steps[step].text}</p>
+                    <div className="mt-3 flex justify-between items-center">
+                        <span className="text-[10px] opacity-70 uppercase tracking-widest">{step + 1} / 4</span>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onNext(); }}
+                                className="bg-white text-accent px-3 py-1 rounded-full text-xs font-black uppercase hover:bg-gray-100 transition-all"
+                            >
+                                {step === 3 ? 'Got it!' : 'Next'}
+                            </button>
+                            {step < 3 && (
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        // Skip to end
+                                        for(let i=step; i<4; i++) onNext();
+                                    }}
+                                    className="text-white/70 hover:text-white text-[10px] uppercase font-bold tracking-wider px-2"
+                                >
+                                    Skip Tutorial
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    {/* Arrow */}
+                    <div 
+                        className={`absolute w-4 h-4 bg-accent rotate-45 ${step === 0 ? '-top-2 left-1/2 -translate-x-1/2' : '-bottom-2 left-1/2 -translate-x-1/2'}`}
+                    ></div>
+                </div>
+            </div>
         </div>
     );
 };

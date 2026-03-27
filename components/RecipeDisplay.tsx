@@ -10,6 +10,8 @@ import { ClockIcon } from './icons/ClockIcon';
 import { FireIcon } from './icons/FireIcon';
 import { CalendarIcon } from './icons/CalendarIcon';
 
+import ActionButtons from './ActionButtons';
+
 interface InstructionDisplayProps {
     instructionSet: InstructionSet;
     completedSteps: boolean[];
@@ -25,6 +27,10 @@ interface InstructionDisplayProps {
     onStartCooking: () => void;
     isModifying: boolean;
     isEcoApplied: boolean;
+    isCookingMode: boolean;
+    isKeywordSearch?: boolean;
+    onRegenerate?: () => void;
+    onModify: (prompt: string, summary: string) => void;
 }
 
 const InstructionDisplay: React.FC<InstructionDisplayProps> = ({ 
@@ -41,7 +47,11 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
     onRevert,
     onStartCooking,
     isModifying,
-    isEcoApplied
+    isEcoApplied,
+    isCookingMode,
+    isKeywordSearch,
+    onRegenerate,
+    onModify
 }) => {
     const allStepsCompleted = completedSteps.length > 0 && completedSteps.every(Boolean);
     const showEcoButton = !!instructionSet.isFood && instructionSet.materials.length > 0;
@@ -56,10 +66,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 pb-6">
                 <div className="flex-grow space-y-3">
                     <div className="flex items-center gap-3">
-                        <h2 className="text-2xl md:text-3xl font-bold leading-tight text-text-primary">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight text-text-primary">
                             {instructionSet.title}
                         </h2>
-                        {totalCount > 0 && (
+                        {isCookingMode && totalCount > 0 && (
                             <span className="shrink-0 bg-accent/10 text-accent text-[10px] font-bold px-2 py-1 rounded font-mono">
                                 {completedCount}/{totalCount}
                             </span>
@@ -108,10 +118,23 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                 
                 {/* Secondary Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    {isKeywordSearch && onRegenerate && (
+                        <button
+                            onClick={onRegenerate}
+                            disabled={isModifying}
+                            className="flex items-center gap-2 bg-primary hover:bg-primary/80 active:scale-95 text-text-primary font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md border border-gray-300 dark:border-transparent touch-manipulation disabled:opacity-50"
+                            title="Find a different recipe"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                            <span>Regenerate</span>
+                        </button>
+                    )}
                     <button
                         onClick={onStartCooking}
                         disabled={isModifying}
-                        className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white font-bold py-2 px-6 rounded-lg transition-all h-[42px] text-sm shadow-lg"
+                        className="flex items-center gap-2 bg-accent hover:bg-accent/90 active:scale-95 text-white font-bold py-2 px-6 rounded-lg transition-all h-[44px] text-sm shadow-lg touch-manipulation disabled:active:scale-100"
                     >
                         <PlayIcon className="w-4 h-4" />
                         <span>START</span>
@@ -121,7 +144,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onRevert}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
+                                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 active:scale-95 text-white font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100"
                             >
                                 <UndoIcon className="w-4 h-4" />
                                 <span>Original</span>
@@ -130,10 +153,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onEcoSwitch}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-eco hover:bg-eco/90 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[42px] text-sm shadow-md"
+                                className="flex items-center gap-2 bg-eco hover:bg-eco/90 active:scale-95 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100"
                                 title="Switch to eco version"
                             >
-                                <LeafIcon className="w-5 h-5 text-white animate-pulse" />
+                                <LeafIcon className="w-5 h-5 text-gray-900 animate-pulse" />
                                 <span>eco version</span>
                             </button>
                         )
@@ -143,13 +166,13 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
 
             {/* Materials Section */}
             {hasMaterials && (
-                <section className="mb-8 border border-gray-300 dark:border-transparent p-4 rounded-xl shadow-sm">
+                <section className="mb-8 border-t border-gray-200 dark:border-gray-800 pt-8">
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                        <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest opacity-80">Materials & Ingredients</h3>
+                        <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight">MATERIALS</h3>
                         {isReadingMaterials ? (
                             <button
                                 onClick={onStopReading}
-                                className="flex items-center gap-2 bg-error/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-error transition-all text-xs"
+                                className="flex items-center gap-2 bg-error/90 text-white font-bold py-2 px-4 rounded-lg hover:bg-error active:scale-95 transition-all text-xs touch-manipulation"
                             >
                                 <StopIcon className="w-4 h-4" />
                                 Stop Reading
@@ -158,10 +181,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onReadMaterials}
                                 disabled={isMuted}
-                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent transition-all text-xs disabled:opacity-40"
+                                className="flex items-center gap-2 bg-accent/80 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent active:scale-95 transition-all text-xs disabled:opacity-40 disabled:active:scale-100 touch-manipulation"
                             >
                                 <PlayIcon className="w-4 h-4" />
-                                read aloud
+                                Read aloud
                             </button>
                         )}
                     </div>
@@ -175,14 +198,22 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                 </section>
             )}
 
+            {/* Quick Actions Section - Moved here */}
+            {!isCookingMode && (
+                <div className="mb-8 border-t border-gray-200 dark:border-gray-800 pt-8">
+                    <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight mb-6">QUICK ACTIONS</h3>
+                    <ActionButtons onModify={onModify} disabled={isModifying} />
+                </div>
+            )}
+
             {/* Instructions Section */}
-            <section className="border border-gray-300 dark:border-transparent p-4 rounded-xl shadow-sm">
+            <section className="border-t border-gray-200 dark:border-gray-800 pt-8">
                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-                    <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest opacity-80">Steps (with repeated quantities)</h3>
+                    <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight">STEPS</h3>
                     <button
                         onClick={onReadInstructions}
                         disabled={isMuted || (readingStatus === 'idle' && allStepsCompleted)}
-                        className={`flex items-center gap-2 font-bold py-2 px-4 rounded-lg transition-all text-xs disabled:opacity-40 shadow-md ${
+                        className={`flex items-center gap-2 font-bold py-2 px-4 rounded-lg active:scale-95 transition-all text-xs disabled:opacity-40 disabled:active:scale-100 shadow-md touch-manipulation ${
                             readingStatus === 'reading' 
                             ? 'bg-accent/70 hover:bg-accent text-white' 
                             : readingStatus === 'paused'
@@ -203,7 +234,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                         ) : (
                             <>
                                 <PlayIcon className="w-4 h-4" />
-                                <span>read aloud</span>
+                                <span>Read aloud</span>
                             </>
                         )}
                     </button>
@@ -224,7 +255,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                                     id={`step-${index}`}
                                     checked={completedSteps[index] ?? false}
                                     onChange={() => onToggleStep(index)}
-                                    className="h-5 w-5 rounded bg-secondary text-accent focus:ring-accent cursor-pointer border-none"
+                                    className="h-6 w-6 rounded bg-secondary text-accent focus:ring-accent cursor-pointer border-none"
                                 />
                             </div>
                             <label
@@ -242,7 +273,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Reference Section */}
             {hasSources && (
                 <div className="mt-8 pt-6">
-                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Grounding Sources</p>
+                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Sources</p>
                     <div className="flex flex-wrap gap-2">
                         {instructionSet.sources!.map((source, index) => (
                             <a 
