@@ -117,24 +117,11 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                 </div>
                 
                 {/* Secondary Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                    {isKeywordSearch && onRegenerate && (
-                        <button
-                            onClick={onRegenerate}
-                            disabled={isModifying}
-                            className="flex items-center gap-2 bg-primary hover:bg-primary/80 active:scale-95 text-text-primary font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md border border-gray-300 dark:border-transparent touch-manipulation disabled:opacity-50"
-                            title="Find a different recipe"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                            </svg>
-                            <span>Regenerate</span>
-                        </button>
-                    )}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
                     <button
                         onClick={onStartCooking}
                         disabled={isModifying}
-                        className="flex items-center gap-2 bg-accent hover:bg-accent/90 active:scale-95 text-white font-bold py-2 px-6 rounded-lg transition-all h-[44px] text-sm shadow-lg touch-manipulation disabled:active:scale-100"
+                        className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 active:scale-95 text-white font-bold py-2 px-6 rounded-lg transition-all h-[44px] text-sm shadow-lg touch-manipulation disabled:active:scale-100 w-full sm:w-auto"
                     >
                         <PlayIcon className="w-4 h-4" />
                         <span>START</span>
@@ -144,7 +131,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onRevert}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 active:scale-95 text-white font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100"
+                                className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 active:scale-95 text-white font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100 w-full sm:w-auto"
                             >
                                 <UndoIcon className="w-4 h-4" />
                                 <span>Original</span>
@@ -153,7 +140,7 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                             <button
                                 onClick={onEcoSwitch}
                                 disabled={isModifying}
-                                className="flex items-center gap-2 bg-eco hover:bg-eco/90 active:scale-95 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100"
+                                className="flex items-center justify-center gap-2 bg-eco hover:bg-eco/90 active:scale-95 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100 w-full sm:w-auto"
                                 title="Switch to eco version"
                             >
                                 <LeafIcon className="w-5 h-5 text-gray-900 animate-pulse" />

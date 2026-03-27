@@ -4,7 +4,7 @@ import { ChatMessage as ChatMessageType } from '../types';
 import ChatMessage from './ChatMessage';
 import { MicIcon } from './icons/MicIcon';
 import { SendIcon } from './icons/SendIcon';
-import { CameraIcon } from './icons/CameraIcon';
+import { CameraPlusIcon } from './icons/CameraPlusIcon';
 import { StopIcon } from './icons/StopIcon';
 
 interface ChatInterfaceProps {
@@ -197,7 +197,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                     className="p-3 text-accent hover:bg-accent/10 rounded-xl transition-all active:scale-95"
                                     disabled={isAnswering || !!pendingMod || isCookingMode}
                                 >
-                                    <CameraIcon className="w-6 h-6" />
+                                    <CameraPlusIcon className="w-6 h-6" />
                                 </button>
                                 <button 
                                     type="button"
