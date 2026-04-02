@@ -13,6 +13,11 @@ import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
 import { MicIcon } from './components/icons/MicIcon';
 
 const App: React.FC = () => {
+    const logTime = useCallback((label: string, startTime: number) => {
+        const duration = (performance.now() - startTime).toFixed(2);
+        console.log(`[DEV_METRIC] ${label}: ${duration}ms`);
+    }, []);
+
     const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
         try {
             const saved = localStorage.getItem('theme');
@@ -141,8 +146,10 @@ const App: React.FC = () => {
     const [isListening, setIsListening] = useState<boolean>(false);
     const [hasPrimed, setHasPrimed] = useState(false);
     const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
+    const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
     const [micPermissionState, setMicPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
+    const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(true);
     const [lastSearchInput, setLastSearchInput] = useState<string>('');
     const [isKeywordSearch, setIsKeywordSearch] = useState<boolean>(false);
     
@@ -155,6 +162,7 @@ const App: React.FC = () => {
     const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
     const restartTimeoutRef = useRef<any>(null);
     const isContinuousListeningRef = useRef(isContinuousListening);
+    const isSpeakingRef = useRef(isSpeaking);
     const handleSendMessageRef = useRef<any>(null);
 
     const getLangTag = useCallback((lang: string | undefined): string => {
@@ -230,7 +238,9 @@ const App: React.FC = () => {
             onEnd?.();
             return;
         }
+        const startTime = performance.now();
         window.speechSynthesis.cancel();
+        setIsSpeaking(false);
         
         const safeText = String(text).replace(/[*#]/g, '');
         const utterance = new SpeechSynthesisUtterance(safeText);
@@ -247,21 +257,28 @@ const App: React.FC = () => {
         }
         
         utteranceRef.current = utterance;
+        utterance.onstart = () => {
+            setIsSpeaking(true);
+            logTime('TTS_READ_ALOUD_START', startTime);
+        };
         utterance.onend = () => {
+            setIsSpeaking(false);
             utteranceRef.current = null;
             onEnd?.();
         };
         utterance.onerror = () => {
+            setIsSpeaking(false);
             utteranceRef.current = null;
             onEnd?.();
         };
 
         window.speechSynthesis.speak(utterance);
-    }, [instructionSet, getLangTag]);
+    }, [instructionSet, getLangTag, logTime]);
 
     const toggleMessageSpeech = useCallback((index: number, text: string, lang?: string) => {
         if (speakingMessageIndex === index) {
             window.speechSynthesis.cancel();
+            setIsSpeaking(false);
             setSpeakingMessageIndex(null);
         } else {
             setSpeakingMessageIndex(index);
@@ -271,6 +288,7 @@ const App: React.FC = () => {
 
     const handleFetchInstructions = useCallback(async (input: string, imageData?: { data: string, mimeType: string }) => {
         if (!input && !imageData) return;
+        const startTime = performance.now();
         primeSpeech();
         setIsLoading(true);
         setError(null);
@@ -292,6 +310,7 @@ const App: React.FC = () => {
 
         try {
             const data = await getInstructions(input, imageData);
+            logTime('FETCH_RECIPE_RESPONSE', startTime);
             
             const isError = data.title.toLowerCase().includes('error') || (data.steps || []).length === 0;
             if (isError) {
@@ -317,7 +336,7 @@ const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [speak, primeSpeech, getLangTag, safeSetError]);
+    }, [speak, primeSpeech, getLangTag, safeSetError, logTime]);
 
     const handleRegenerate = useCallback(() => {
         if (lastSearchInput) {
@@ -443,6 +462,7 @@ const App: React.FC = () => {
     const handleStopReading = useCallback(() => {
         stopReadingRef.current = true;
         window.speechSynthesis.cancel();
+        setIsSpeaking(false);
         setIsReadingMaterials(false);
         setReadingStatus('idle');
     }, []);
@@ -485,6 +505,7 @@ const App: React.FC = () => {
 
     const handleModifyInstructions = useCallback(async (prompt: string, isEcoSwitch: boolean = false) => {
         if (!instructionSet) return;
+        const startTime = performance.now();
         primeSpeech();
         setIsModifying(true);
         handleStopReading();
@@ -496,6 +517,7 @@ const App: React.FC = () => {
             }
 
             const updated = await modifyInstructions(instructionSet, prompt);
+            logTime('ALTERATION_RESPONSE', startTime);
             if (isEcoSwitch) {
                 setIsEcoApplied(true);
                 updated.hasAnimalProducts = false;
@@ -512,7 +534,7 @@ const App: React.FC = () => {
         } finally {
             setIsModifying(false);
         }
-    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading, getLangTag]);
+    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading, getLangTag, logTime]);
 
     const handleConfirmModification = useCallback(() => {
         if (pendingMod) handleModifyInstructions(pendingMod.prompt, pendingMod.prompt.includes("VEGAN"));
@@ -591,7 +613,9 @@ const App: React.FC = () => {
             if (isReadingMaterials) {
                 handleStopReading();
             } else if (readingStatus === 'reading') {
-                handleReadInstructions(); // Toggles to paused
+                window.speechSynthesis.cancel();
+                setIsSpeaking(false);
+                setReadingStatus('paused');
             }
             return;
         }
@@ -669,19 +693,24 @@ const App: React.FC = () => {
         if (isCookingMode) return;
 
         primeSpeech();
+        const startTime = performance.now();
         setIsAnswering(true);
         handleStopReading();
         setChatHistory(prev => [...prev, { role: Role.USER, content: message, image }]);
 
         try {
+            const intentStartTime = performance.now();
             // Only check for modification intent if there's no image
             const intent = !image ? await detectModificationIntent(message, instructionSet?.language || 'en-US') : null;
+            if (intent) logTime('INTENT_DETECTION_RESPONSE', intentStartTime);
             
             if (intent?.type === 'MODIFICATION' && instructionSet) {
                 setIsAnswering(false);
                 requestModification(message, intent.summary);
             } else {
+                const chatStartTime = performance.now();
                 const aiResult = await getChatResponse(instructionSet, chatHistory, message, completedSteps, image);
+                logTime('CHAT_ASSISTANT_RESPONSE', chatStartTime);
                 const lang = getLangTag(aiResult.language);
                 
                 setChatHistory(prev => [...prev, { 
@@ -697,12 +726,16 @@ const App: React.FC = () => {
             setIsAnswering(false);
             console.error(e);
         }
-    }, [instructionSet, isAnswering, speak, chatHistory, completedSteps, primeSpeech, handleStopReading, requestModification, getLangTag, isCookingMode, currentReadingStep, readingStatus, isReadingMaterials, handleReadInstructions, handleReadMaterials]);
+    }, [instructionSet, isAnswering, speak, chatHistory, completedSteps, primeSpeech, handleStopReading, requestModification, getLangTag, isCookingMode, currentReadingStep, readingStatus, isReadingMaterials, handleReadInstructions, handleReadMaterials, logTime]);
 
     // Keep refs in sync
     useEffect(() => {
         isContinuousListeningRef.current = isContinuousListening;
     }, [isContinuousListening]);
+
+    useEffect(() => {
+        isSpeakingRef.current = isSpeaking;
+    }, [isSpeaking]);
 
     useEffect(() => {
         handleSendMessageRef.current = handleSendMessage;
@@ -711,15 +744,29 @@ const App: React.FC = () => {
     // Global Speech Recognition Initialisation
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
+        if (!SpeechRecognition) {
+            setIsSpeechSupported(false);
+            return;
+        }
 
         const recognition = new SpeechRecognition();
         recognitionRef.current = recognition;
-        recognition.interimResults = true; // Enable interim results for low latency
-        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.continuous = false; // Using false + auto-restart is more reliable across mobile/desktop
 
         let networkErrorRetryCount = 0;
         const MAX_NETWORK_RETRIES = 3;
+        let lastEventTime = Date.now();
+
+        // Watchdog to detect stuck recognition
+        const watchdogInterval = setInterval(() => {
+            if (isContinuousListeningRef.current && 
+                recognitionStateRef.current === 'STARTED' && 
+                Date.now() - lastEventTime > 10000) {
+                console.log("[MIC] Watchdog: Recognition seems stuck, restarting...");
+                try { recognition.stop(); } catch (e) {}
+            }
+        }, 5000);
 
         recognition.onend = () => {
             setIsListening(false);
@@ -727,13 +774,15 @@ const App: React.FC = () => {
             
             if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
             
-            // Auto-restart if continuous listening is enabled
-            if (isContinuousListeningRef.current) {
-                // Slightly longer delay to avoid "network" errors from rapid restarts
-                const delay = networkErrorRetryCount > 0 ? Math.min(1000 * Math.pow(2, networkErrorRetryCount), 5000) : 300;
+            // Auto-restart if continuous listening is enabled AND we aren't speaking
+            if (isContinuousListeningRef.current && !isSpeakingRef.current) {
+                // Exponential backoff for network errors
+                const delay = networkErrorRetryCount > 0 
+                    ? Math.min(1000 * Math.pow(2, networkErrorRetryCount), 10000) 
+                    : 150; // Very short delay for normal restarts
                 
                 restartTimeoutRef.current = setTimeout(() => {
-                    if (isContinuousListeningRef.current && recognitionStateRef.current === 'IDLE') {
+                    if (isContinuousListeningRef.current && !isSpeakingRef.current && recognitionStateRef.current === 'IDLE') {
                         try { 
                             if (recognitionRef.current) {
                                 recognitionStateRef.current = 'STARTING';
@@ -741,73 +790,80 @@ const App: React.FC = () => {
                             }
                         } catch (e) { 
                             recognitionStateRef.current = 'IDLE';
-                            // Ignore "already started" errors
                         }
                     }
                 }, delay);
             }
         };
 
+        let lastProcessedTranscript = '';
+        let lastProcessedTime = 0;
+        let recognitionStartTime = 0;
+
         recognition.onstart = () => {
             setIsListening(true);
             recognitionStateRef.current = 'STARTED';
-            networkErrorRetryCount = 0; // Reset retry count on successful start
+            networkErrorRetryCount = 0; 
+            recognitionStartTime = performance.now();
+            lastEventTime = Date.now();
         };
 
         recognition.onerror = (event: any) => {
             recognitionStateRef.current = 'IDLE';
+            lastEventTime = Date.now();
+            
             const isBenign = event.error === 'aborted' || event.error === 'no-speech';
             const isNetwork = event.error === 'network';
 
             if (!isBenign && !isNetwork) {
-                console.error('Speech recognition error', String(event.error));
+                console.error('[MIC] Speech recognition error:', event.error);
             }
 
             if (isNetwork) {
                 networkErrorRetryCount++;
                 if (networkErrorRetryCount > MAX_NETWORK_RETRIES) {
-                    console.error('Max network retries reached for speech recognition');
                     setIsContinuousListening(false);
+                    safeSetError("Network error with speech recognition. Please check your connection.");
                 }
             }
 
-            if (event.error === 'not-allowed') {
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
                 setIsContinuousListening(false);
-                safeSetError("Microphone permission denied. Please enable it in your browser settings to use voice commands.");
+                setMicPermissionState('denied');
+                safeSetError("Microphone access is blocked or not supported. Please check your browser settings.");
             }
         };
 
-        let lastProcessedTranscript = '';
-        let lastProcessedTime = 0;
-
         recognition.onresult = (event: any) => {
+            lastEventTime = Date.now();
             const result = event.results[event.results.length - 1];
             const transcript = result[0].transcript.toLowerCase().trim();
             const isFinal = result.isFinal;
 
+            if (!transcript) return;
+
             // Fast-path for commands using interim results
-            // This drastically reduces latency for short commands
             const isCommand = /\b(next|back|stop|pause|continue|resume|step \d+|hush|quiet)\b/.test(transcript);
             const isUrgentStop = /\b(stop|pause|wait|hold on|hush|quiet)\b/.test(transcript);
 
-            // Immediate interruption for stop/pause commands
-            if (isUrgentStop && window.speechSynthesis.speaking) {
+            if (isUrgentStop && (window.speechSynthesis.speaking || isSpeakingRef.current)) {
                 window.speechSynthesis.cancel();
+                setIsSpeaking(false);
             }
             
-            // Only process if it's a new command or final result
-            // Debounce to prevent double-triggering within 1 second for the same transcript
             const now = Date.now();
             if (isCommand || isFinal) {
-                if (transcript !== lastProcessedTranscript || (now - lastProcessedTime > 1500)) {
-                    // For interim results, we only trigger if it's a clear command match
+                // Debounce to prevent double-triggering
+                if (transcript !== lastProcessedTranscript || (now - lastProcessedTime > 2000)) {
                     if (isFinal || isCommand) {
+                        if (recognitionStartTime > 0) {
+                            logTime('STT_RESPONSE', recognitionStartTime);
+                            recognitionStartTime = 0;
+                        }
                         handleSendMessageRef.current(transcript);
                         lastProcessedTranscript = transcript;
                         lastProcessedTime = now;
                         
-                        // If it was a command caught in interim, we might want to stop the current recognition 
-                        // to prevent the "final" version of the same speech from triggering it again
                         if (!isFinal && isCommand) {
                             try { recognition.stop(); } catch (e) {}
                         }
@@ -817,7 +873,9 @@ const App: React.FC = () => {
         };
 
         return () => {
+            clearInterval(watchdogInterval);
             isContinuousListeningRef.current = false;
+            if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
             try { recognition.abort(); } catch (e) {}
         };
     }, []); // Initialise once
@@ -869,7 +927,9 @@ const App: React.FC = () => {
     useEffect(() => {
         if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
         
-        if (isContinuousListening) {
+        const shouldBeListening = isContinuousListening && !isSpeaking;
+        
+        if (shouldBeListening) {
             if (recognitionStateRef.current === 'IDLE' && recognitionRef.current) {
                 try { 
                     recognitionStateRef.current = 'STARTING';
@@ -890,7 +950,7 @@ const App: React.FC = () => {
                 }
             }
         }
-    }, [isContinuousListening]);
+    }, [isContinuousListening, isSpeaking]);
 
     return (
         <div className="min-h-screen bg-primary text-text-secondary font-sans flex flex-col" onClick={primeSpeech} onTouchStart={primeSpeech}>
@@ -975,6 +1035,15 @@ const App: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                         </svg>
                         <p className="text-sm font-medium">{error}</p>
+                    </div>
+                )}
+
+                {!isSpeechSupported && (
+                    <div className="bg-accent/10 text-accent p-4 rounded-xl animate-fade-in flex items-center gap-3 border border-accent/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                        </svg>
+                        <p className="text-xs font-medium">Voice commands are not fully supported in this browser. For the best experience, please use Chrome or Safari.</p>
                     </div>
                 )}
                 

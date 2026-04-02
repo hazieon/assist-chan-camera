@@ -40,6 +40,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
     const [isListening, setIsListening] = useState(false);
     const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
     const [isCameraActive, setIsCameraActive] = useState(false);
+    const [capturedImage, setCapturedImage] = useState<{ data: string, mimeType: string } | null>(null);
     const [isProcessingImage, setIsProcessingImage] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
     
@@ -242,10 +243,22 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
             ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             const base64Data = dataUrl.split(',')[1];
-            setIsProcessingImage(true);
-            onFetch('', { data: base64Data, mimeType: 'image/jpeg' });
+            setCapturedImage({ data: base64Data, mimeType: 'image/jpeg' });
             stopCamera();
         }
+    };
+
+    const confirmImage = () => {
+        if (capturedImage) {
+            setIsProcessingImage(true);
+            onFetch('', capturedImage);
+            setCapturedImage(null);
+        }
+    };
+
+    const retakeImage = () => {
+        setCapturedImage(null);
+        setIsCameraActive(true);
     };
 
     const handleRandomRecipe = () => {
@@ -363,7 +376,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                                     className="bg-accent text-white px-6 py-2 rounded-full font-bold shadow-lg active:scale-95 transition-all hover:bg-accent/90 flex items-center gap-2"
                                 >
                                     <CameraIcon className="w-5 h-5" />
-                                    Capture & Scan
+                                    Capture Photo
                                 </button>
                                 <button 
                                     onClick={stopCamera}
@@ -376,6 +389,44 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                     )}
                 </div>
             </div>
+            )}
+
+            {capturedImage && !isProcessingImage && (
+                <div className="flex flex-col gap-4 animate-fade-in">
+                    <div className="bg-accent/10 border-l-4 border-accent p-4 rounded-r-lg">
+                        <p className="text-sm md:text-base text-text-primary font-medium leading-relaxed">
+                            Check the photo. If it's clear, click 'Confirm & Scan'.
+                        </p>
+                    </div>
+                    <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-inner">
+                        <img 
+                            src={`data:${capturedImage.mimeType};base64,${capturedImage.data}`} 
+                            alt="Captured" 
+                            className="w-full h-full object-contain"
+                            referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
+                            <button 
+                                onClick={confirmImage}
+                                className="bg-accent text-white px-6 py-2 rounded-full font-bold shadow-lg active:scale-95 transition-all hover:bg-accent/90 flex items-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                Confirm & Scan
+                            </button>
+                            <button 
+                                onClick={retakeImage}
+                                className="bg-gray-700 text-white px-6 py-2 rounded-full font-bold shadow-lg active:scale-95 hover:bg-gray-600 flex items-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                Retake
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {isProcessingImage && (
