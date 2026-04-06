@@ -10,6 +10,9 @@ interface UrlInputFormProps {
     isLoading: boolean;
     isLandingPage?: boolean;
     suggestions?: string[];
+    onToggleListening?: () => void;
+    isListening?: boolean;
+    interimTranscript?: string;
 }
 
 const RANDOM_RECIPES = [
@@ -35,10 +38,8 @@ const RANDOM_RECIPES = [
     "Falafel Wrap"
 ];
 
-const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandingPage = false, suggestions = [] }) => {
+const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandingPage = false, suggestions = [], onToggleListening, isListening: globalIsListening, interimTranscript }) => {
     const [inputValue, setInputValue] = useState('');
-    const [isListening, setIsListening] = useState(false);
-    const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [capturedImage, setCapturedImage] = useState<{ data: string, mimeType: string } | null>(null);
     const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -46,7 +47,6 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
     
     const [camPermissionState, setCamPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
     
-    const recognitionRef = useRef<any>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -57,50 +57,12 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
         }
     }, [isLoading]);
 
-    // Initialise Speech Recognition
+    // Sync input with global mic transcript
     useEffect(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                setIsListening(true);
-                recognitionStateRef.current = 'STARTED';
-            };
-
-            recognition.onresult = (event: any) => {
-                const transcript = Array.from(event.results)
-                    .map((result: any) => result[0])
-                    .map((result: any) => result.transcript)
-                    .join('');
-                setInputValue(transcript);
-                
-                if (event.results[0].isFinal) {
-                    setIsListening(false);
-                    onFetch(transcript);
-                }
-            };
-
-            recognition.onerror = () => {
-                setIsListening(false);
-                recognitionStateRef.current = 'IDLE';
-            };
-            recognition.onend = () => {
-                setIsListening(false);
-                recognitionStateRef.current = 'IDLE';
-            };
-            recognitionRef.current = recognition;
+        if (globalIsListening && interimTranscript) {
+            setInputValue(interimTranscript);
         }
-
-        return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
-        };
-    }, [onFetch]);
+    }, [globalIsListening, interimTranscript]);
 
     // Camera Stream Management
     useEffect(() => {
@@ -177,25 +139,6 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
             }
         };
     }, [isCameraActive]);
-
-    const toggleListening = () => {
-        if (isListening || recognitionStateRef.current === 'STARTED' || recognitionStateRef.current === 'STARTING') {
-            recognitionStateRef.current = 'STOPPING';
-            recognitionRef.current?.stop();
-            setIsListening(false);
-        } else {
-            if (recognitionStateRef.current !== 'IDLE') return;
-            setInputValue('');
-            try {
-                recognitionStateRef.current = 'STARTING';
-                recognitionRef.current?.start();
-                setIsListening(true);
-            } catch (e) {
-                recognitionStateRef.current = 'IDLE';
-                console.error("Speech recognition failed to start", e);
-            }
-        }
-    };
 
     const toggleCamera = async () => {
         if (!isCameraActive) {
@@ -448,8 +391,8 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
-                                placeholder={isListening ? "Listening..." : (isLandingPage ? "Search, paste a URL, or scan instructions" : "e.g. Make it gluten free...")}
-                                className={`w-full ${isLandingPage ? 'p-4 text-lg rounded-2xl' : 'p-4 text-base rounded-full'} pr-24 bg-secondary border-2 border-gray-300 dark:border-gray-600 focus:ring-4 focus:ring-accent/30 focus:outline-none transition-all placeholder-gray-500 ${isListening ? 'shadow-[0_0_25px_rgba(79,70,229,0.5)]' : 'shadow-xl'}`}
+                                placeholder={globalIsListening ? "Listening..." : (isLandingPage ? "Search, paste a URL, or scan instructions" : "e.g. Make it gluten free...")}
+                                className={`w-full ${isLandingPage ? 'p-4 text-lg rounded-2xl' : 'p-4 text-base rounded-full'} pr-24 bg-secondary border-2 border-gray-300 dark:border-gray-600 focus:ring-4 focus:ring-accent/30 focus:outline-none transition-all placeholder-gray-500 ${globalIsListening ? 'shadow-[0_0_25px_rgba(79,70,229,0.5)]' : 'shadow-xl'}`}
                                 disabled={isLoading}
                                 required
                                 inputMode="search"
@@ -467,10 +410,10 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onFetch, isLoading, isLandi
                                     <CameraIcon className="w-6 h-6" />
                                 </button>
                                 <button
-                                    id="mic-btn"
+                                    id="mic-btn-form"
                                     type="button"
-                                    onClick={toggleListening}
-                                    className={`p-2 rounded-full transition-all ${isListening ? 'bg-error text-white animate-pulse' : 'text-accent hover:bg-gray-700'}`}
+                                    onClick={onToggleListening}
+                                    className={`p-2 rounded-full transition-all ${globalIsListening ? 'bg-error text-white animate-pulse' : 'text-accent hover:bg-gray-700'}`}
                                     title="Voice Search"
                                     disabled={isLoading}
                                 >

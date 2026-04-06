@@ -149,9 +149,11 @@ const App: React.FC = () => {
     const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
     const [pendingMod, setPendingMod] = useState<{ prompt: string; summary: string } | null>(null);
     const [micPermissionState, setMicPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
+    const [isMicReady, setIsMicReady] = useState<boolean>(false);
     const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(true);
     const [lastSearchInput, setLastSearchInput] = useState<string>('');
     const [isKeywordSearch, setIsKeywordSearch] = useState<boolean>(false);
+    const [interimTranscript, setInterimTranscript] = useState<string>('');
     
     const isMutedRef = useRef(isMuted);
     isMutedRef.current = isMuted;
@@ -163,7 +165,58 @@ const App: React.FC = () => {
     const restartTimeoutRef = useRef<any>(null);
     const isContinuousListeningRef = useRef(isContinuousListening);
     const isSpeakingRef = useRef(isSpeaking);
+    const isCookingModeRef = useRef(isCookingMode);
     const handleSendMessageRef = useRef<any>(null);
+
+    useEffect(() => {
+        isContinuousListeningRef.current = isContinuousListening;
+    }, [isContinuousListening]);
+
+    useEffect(() => {
+        isSpeakingRef.current = isSpeaking;
+    }, [isSpeaking]);
+
+    useEffect(() => {
+        isCookingModeRef.current = isCookingMode;
+    }, [isCookingMode]);
+
+    useEffect(() => {
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'microphone' as any }).then(result => {
+                setMicPermissionState(result.state as any);
+                result.onchange = () => setMicPermissionState(result.state as any);
+            }).catch(() => {});
+        }
+    }, []);
+
+    const playBeep = useCallback((isStart: boolean = true) => {
+        if (isMutedRef.current) return;
+        try {
+            const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+            
+            const audioCtx = new AudioContextClass();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.frequency.value = isStart ? 660 : 440;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+            
+            // Cleanup context
+            setTimeout(() => {
+                if (audioCtx.state !== 'closed') audioCtx.close();
+            }, 200);
+        } catch (e) {}
+    }, []);
 
     const getLangTag = useCallback((lang: string | undefined): string => {
         if (!lang) return 'en-US';
@@ -508,6 +561,10 @@ const App: React.FC = () => {
         const startTime = performance.now();
         primeSpeech();
         setIsModifying(true);
+        
+        const lang = getLangTag(instructionSet.language);
+        speak("Processing.", undefined, lang);
+        
         handleStopReading();
         setPendingMod(null);
 
@@ -526,9 +583,9 @@ const App: React.FC = () => {
             setInstructionSet(updated);
             setCompletedSteps(new Array((updated.steps || []).length).fill(false));
             
-            const lang = getLangTag(updated.language);
-            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Instructions updated successfully.", language: lang }]);
-            speak("Updated.", undefined, lang);
+            const updatedLang = getLangTag(updated.language);
+            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Instructions updated successfully.", language: updatedLang }]);
+            speak("Updated.", undefined, updatedLang);
         } catch (e) {
             safeSetError("Update failed.");
         } finally {
@@ -560,17 +617,26 @@ const App: React.FC = () => {
     const handleRevertInstructions = useCallback(() => {
         if (!originalInstructionSet) return;
         handleStopReading();
+        
+        const lang = getLangTag(originalInstructionSet.language);
+        speak("Reverting changes.", undefined, lang);
+        
         setInstructionSet(JSON.parse(JSON.stringify(originalInstructionSet)));
         setCompletedSteps(new Array(originalInstructionSet.steps.length).fill(false));
         setIsEcoApplied(false);
         setOriginalInstructionSet(null);
         
-        const lang = getLangTag(originalInstructionSet.language);
         speak("Reverted to original.", undefined, lang);
     }, [originalInstructionSet, handleStopReading, speak, getLangTag]);
 
     const handleSendMessage = useCallback(async (message: string, image?: string) => {
-        if (!instructionSet) return;
+        if (!instructionSet) {
+            if (message || image) {
+                const imageData = image ? { data: image.split(',')[1] || image, mimeType: 'image/jpeg' } : undefined;
+                handleFetchInstructions(message, imageData);
+            }
+            return;
+        }
 
         const lowerMsg = message.toLowerCase().trim().replace(/[.,?!]/g, '');
         
@@ -587,9 +653,25 @@ const App: React.FC = () => {
         // If we are answering, only allow stop/pause to interrupt
         if (isAnswering && !isStop) return;
         
-        // Match "step 5", "go to step 3", etc.
-        const stepMatch = lowerMsg.match(/(?:go to )?step (\d+)/);
-        const targetStepNum = stepMatch ? parseInt(stepMatch[1], 10) : null;
+        // Match "step 5", "go to step 3", "step seven", etc.
+        const wordToNum: Record<string, number> = {
+            'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+            'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+            'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+            'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20
+        };
+
+        const stepMatch = lowerMsg.match(/(?:go to |jump to )?step (\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)/);
+        let targetStepNum: number | null = null;
+        
+        if (stepMatch) {
+            const val = stepMatch[1];
+            if (/^\d+$/.test(val)) {
+                targetStepNum = parseInt(val, 10);
+            } else {
+                targetStepNum = wordToNum[val] || null;
+            }
+        }
 
         if (targetStepNum !== null && instructionSet) {
             const targetIndex = targetStepNum - 1;
@@ -771,29 +853,38 @@ const App: React.FC = () => {
         recognition.onend = () => {
             setIsListening(false);
             recognitionStateRef.current = 'IDLE';
+            setInterimTranscript('');
             
             if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
             
-            // Auto-restart if continuous listening is enabled AND we aren't speaking
-            if (isContinuousListeningRef.current && !isSpeakingRef.current) {
-                // Exponential backoff for network errors
-                const delay = networkErrorRetryCount > 0 
-                    ? Math.min(1000 * Math.pow(2, networkErrorRetryCount), 10000) 
-                    : 150; // Very short delay for normal restarts
-                
-                restartTimeoutRef.current = setTimeout(() => {
-                    if (isContinuousListeningRef.current && !isSpeakingRef.current && recognitionStateRef.current === 'IDLE') {
-                        try { 
-                            if (recognitionRef.current) {
-                                recognitionStateRef.current = 'STARTING';
-                                recognitionRef.current.start(); 
-                            }
-                        } catch (e) { 
-                            recognitionStateRef.current = 'IDLE';
+        // Auto-restart if continuous listening is enabled
+        // In cooking mode, we restart even if speaking (so user can interrupt)
+        // Outside cooking mode, we wait for speech to end to avoid hearing ourselves
+        const shouldRestart = isContinuousListeningRef.current && 
+            (isCookingModeRef.current || !isSpeakingRef.current);
+
+        if (shouldRestart) {
+            // Exponential backoff for network errors
+            const delay = networkErrorRetryCount > 0 
+                ? Math.min(1000 * Math.pow(2, networkErrorRetryCount), 10000) 
+                : 150; // Very short delay for normal restarts
+            
+            restartTimeoutRef.current = setTimeout(() => {
+                const stillShouldRestart = isContinuousListeningRef.current && 
+                    (isCookingModeRef.current || !isSpeakingRef.current);
+
+                if (stillShouldRestart && recognitionStateRef.current === 'IDLE') {
+                    try { 
+                        if (recognitionRef.current) {
+                            recognitionStateRef.current = 'STARTING';
+                            recognitionRef.current.start(); 
                         }
+                    } catch (e) { 
+                        recognitionStateRef.current = 'IDLE';
                     }
-                }, delay);
-            }
+                }
+            }, delay);
+        }
         };
 
         let lastProcessedTranscript = '';
@@ -802,14 +893,17 @@ const App: React.FC = () => {
 
         recognition.onstart = () => {
             setIsListening(true);
+            setIsMicReady(true);
             recognitionStateRef.current = 'STARTED';
             networkErrorRetryCount = 0; 
             recognitionStartTime = performance.now();
             lastEventTime = Date.now();
+            playBeep(true);
         };
 
         recognition.onerror = (event: any) => {
             recognitionStateRef.current = 'IDLE';
+            setIsMicReady(false);
             lastEventTime = Date.now();
             
             const isBenign = event.error === 'aborted' || event.error === 'no-speech';
@@ -841,9 +935,10 @@ const App: React.FC = () => {
             const isFinal = result.isFinal;
 
             if (!transcript) return;
+            setInterimTranscript(transcript);
 
             // Fast-path for commands using interim results
-            const isCommand = /\b(next|back|stop|pause|continue|resume|step \d+|hush|quiet)\b/.test(transcript);
+            const isCommand = /\b(next|back|stop|pause|continue|resume|step \d+|step (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)|hush|quiet)\b/.test(transcript);
             const isUrgentStop = /\b(stop|pause|wait|hold on|hush|quiet)\b/.test(transcript);
 
             if (isUrgentStop && (window.speechSynthesis.speaking || isSpeakingRef.current)) {
@@ -852,7 +947,11 @@ const App: React.FC = () => {
             }
             
             const now = Date.now();
-            if (isCommand || isFinal) {
+            // If we are speaking, ONLY allow commands to be processed
+            // This prevents the app from hearing itself and thinking it's a chat message
+            const shouldProcess = isCommand || (isFinal && !isSpeakingRef.current);
+
+            if (shouldProcess) {
                 // Debounce to prevent double-triggering
                 if (transcript !== lastProcessedTranscript || (now - lastProcessedTime > 2000)) {
                     if (isFinal || isCommand) {
@@ -889,27 +988,35 @@ const App: React.FC = () => {
 
     const handleToggleListening = useCallback(async () => {
         if (!isContinuousListening) {
-            try {
-                // Explicitly request permission
-                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    stream.getTracks().forEach(track => track.stop());
-                    setMicPermissionState('granted');
-                }
-                setIsContinuousListening(true);
-            } catch (err: any) {
-                console.error("Microphone permission error:", err);
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    setMicPermissionState('denied');
-                    safeSetError("Microphone access is blocked. Please click the lock icon in your browser's address bar to allow microphone access, then try again.");
-                } else {
-                    safeSetError("Could not access microphone. Please ensure it is connected and not in use by another app.");
+            // Immediate visual feedback
+            setIsContinuousListening(true);
+            setIsMicReady(false);
+            
+            if (micPermissionState !== 'granted') {
+                try {
+                    // Explicitly request permission
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        stream.getTracks().forEach(track => track.stop());
+                        setMicPermissionState('granted');
+                    }
+                } catch (err: any) {
+                    setIsContinuousListening(false);
+                    console.error("Microphone permission error:", err);
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        setMicPermissionState('denied');
+                        safeSetError("Microphone access is blocked. Please click the lock icon in your browser's address bar to allow microphone access, then try again.");
+                    } else {
+                        safeSetError("Could not access microphone. Please ensure it is connected and not in use by another app.");
+                    }
                 }
             }
         } else {
             setIsContinuousListening(false);
+            setIsMicReady(false);
+            playBeep(false);
         }
-    }, [isContinuousListening, safeSetError]);
+    }, [isContinuousListening, micPermissionState, safeSetError, playBeep]);
 
     const handleNewSearch = useCallback(() => {
         handleStopReading();
@@ -979,8 +1086,18 @@ const App: React.FC = () => {
                                 </svg>
                             )}
                         </button>
-                         <button onClick={handleToggleListening} className={`p-2 rounded-full transition-all active:scale-95 touch-manipulation ${isContinuousListening ? 'bg-error scale-110 shadow-lg' : 'bg-primary/50 hover:bg-primary'}`}>
+                         <button 
+                            onClick={handleToggleListening} 
+                            className={`p-2 rounded-full transition-all active:scale-95 touch-manipulation relative ${
+                                isContinuousListening 
+                                ? (isMicReady ? 'bg-error scale-110 shadow-lg' : 'bg-warning scale-105 shadow-md') 
+                                : 'bg-primary/50 hover:bg-primary'
+                            }`}
+                        >
                             <MicIcon className="w-5 h-5 text-white" />
+                            {isContinuousListening && !isMicReady && (
+                                <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping" />
+                            )}
                         </button>
                         <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary active:scale-95 transition-all touch-manipulation">
                             {isMuted ? <SpeakerMuteIcon className="w-5 h-5 text-gray-500" /> : <SpeakerIcon className="w-5 h-5 text-accent" />}
@@ -998,6 +1115,9 @@ const App: React.FC = () => {
                                 isLoading={isLoading || isModifying} 
                                 isLandingPage={true} 
                                 suggestions={suggestions}
+                                onToggleListening={handleToggleListening}
+                                isListening={isContinuousListening}
+                                interimTranscript={interimTranscript}
                             />
                         </div>
                     </div>

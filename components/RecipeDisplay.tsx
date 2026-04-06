@@ -33,6 +33,68 @@ interface InstructionDisplayProps {
     onModify: (prompt: string, summary: string) => void;
 }
 
+const getIngredientEmoji = (item: string): string => {
+    const lower = item.toLowerCase();
+    
+    // Prioritize butter and unsalted butter
+    if (lower.includes('butter')) return '🧈';
+    
+    // Avoid meat/fish as much as possible, use soup/veg alternatives
+    if (lower.includes('broth') || lower.includes('stock') || lower.includes('soup') || lower.includes('bouillon')) return '🥣';
+    if (lower.includes('chicken') && (lower.includes('broth') || lower.includes('stock'))) return '🥣';
+    if (lower.includes('beef') && (lower.includes('broth') || lower.includes('stock'))) return '🥣';
+    
+    if (lower.includes('flour')) return '🌾';
+    if (lower.includes('sugar')) return '🍬';
+    if (lower.includes('salt')) return '🧂';
+    if (lower.includes('milk') || lower.includes('cream')) return '🥛';
+    if (lower.includes('egg')) return '🥚';
+    if (lower.includes('water')) return '💧';
+    if (lower.includes('oil')) return '🫗';
+    
+    // Meat/Fish (lower priority now)
+    if (lower.includes('chicken')) return '🍗';
+    if (lower.includes('beef') || lower.includes('steak')) return '🥩';
+    if (lower.includes('pork') || lower.includes('bacon')) return '🥓';
+    if (lower.includes('fish') || lower.includes('salmon')) return '🐟';
+    
+    if (lower.includes('garlic')) return '🧄';
+    if (lower.includes('onion')) return '🧅';
+    if (lower.includes('tomato')) return '🍅';
+    if (lower.includes('potato')) return '🥔';
+    if (lower.includes('carrot')) return '🥕';
+    if (lower.includes('pepper') || lower.includes('chili')) return '🌶️';
+    if (lower.includes('lemon') || lower.includes('lime')) return '🍋';
+    if (lower.includes('herb') || lower.includes('parsley') || lower.includes('basil')) return '🌿';
+    if (lower.includes('spice') || lower.includes('cinnamon') || lower.includes('ginger')) return '🧂';
+    if (lower.includes('chocolate') || lower.includes('cocoa')) return '🍫';
+    if (lower.includes('vanilla')) return '🍦';
+    if (lower.includes('yeast') || lower.includes('bread')) return '🍞';
+    if (lower.includes('honey')) return '🍯';
+    if (lower.includes('syrup')) return '🍁';
+    if (lower.includes('nut') || lower.includes('almond') || lower.includes('walnut')) return '🥜';
+    if (lower.includes('seed')) return '🌱';
+    if (lower.includes('fruit') || lower.includes('apple') || lower.includes('berry')) return '🍎';
+    if (lower.includes('veg') || lower.includes('broccoli') || lower.includes('spinach')) return '🥦';
+    if (lower.includes('pasta') || lower.includes('noodle')) return '🍝';
+    if (lower.includes('rice')) return '🍚';
+    if (lower.includes('cheese')) return '🧀';
+    if (lower.includes('vinegar') || lower.includes('soy sauce')) return '🍶';
+    if (lower.includes('wine')) return '🍷';
+    if (lower.includes('beer')) return '🍺';
+    if (lower.includes('coffee')) return '☕';
+    if (lower.includes('tea')) return '🍵';
+    if (lower.includes('juice')) return '🧃';
+    if (lower.includes('ice')) return '🧊';
+    if (lower.includes('bowl')) return '🥣';
+    if (lower.includes('pan') || lower.includes('skillet')) return '🍳';
+    if (lower.includes('pot')) return '🍲';
+    if (lower.includes('knife')) return '🔪';
+    if (lower.includes('spoon')) return '🥄';
+    
+    return '🥣'; // Default
+};
+
 const InstructionDisplay: React.FC<InstructionDisplayProps> = ({ 
     instructionSet, 
     completedSteps, 
@@ -126,28 +188,6 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                         <PlayIcon className="w-4 h-4" />
                         <span>START</span>
                     </button>
-                    {showEcoButton && (
-                        isEcoApplied ? (
-                            <button
-                                onClick={onRevert}
-                                disabled={isModifying}
-                                className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 active:scale-95 text-white font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100 w-full sm:w-auto"
-                            >
-                                <UndoIcon className="w-4 h-4" />
-                                <span>Original</span>
-                            </button>
-                        ) : (
-                            <button
-                                onClick={onEcoSwitch}
-                                disabled={isModifying}
-                                className="flex items-center justify-center gap-2 bg-eco hover:bg-eco/90 active:scale-95 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[44px] text-sm shadow-md touch-manipulation disabled:active:scale-100 w-full sm:w-auto"
-                                title="Switch to eco version"
-                            >
-                                <LeafIcon className="w-5 h-5 text-gray-900 animate-pulse" />
-                                <span>eco version</span>
-                            </button>
-                        )
-                    )}
                 </div>
             </div>
 
@@ -178,7 +218,10 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm md:text-base text-text-secondary">
                         {instructionSet.materials.map((material, index) => (
                             <li key={index} className="flex items-start gap-3 bg-primary/20 p-3 rounded-lg">
-                                <span className="text-accent font-bold">•</span> {material}
+                                <span className="text-xl shrink-0" role="img" aria-label="ingredient icon">
+                                    {getIngredientEmoji(material)}
+                                </span>
+                                <span>{material}</span>
                             </li>
                         ))}
                     </ul>
@@ -188,8 +231,35 @@ const InstructionDisplay: React.FC<InstructionDisplayProps> = ({
             {/* Quick Actions Section - Moved here */}
             {!isCookingMode && (
                 <div className="mb-8 border-t border-gray-200 dark:border-gray-800 pt-8">
-                    <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight mb-6">QUICK ACTIONS</h3>
-                    <ActionButtons onModify={onModify} disabled={isModifying} />
+                    <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                        <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight">QUICK ACTIONS</h3>
+                        {showEcoButton && (
+                            isEcoApplied ? (
+                                <button
+                                    onClick={onRevert}
+                                    disabled={isModifying}
+                                    className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 active:scale-95 text-white font-bold py-2 px-4 rounded-lg transition-all h-[40px] text-xs shadow-md touch-manipulation disabled:opacity-50 disabled:active:scale-100"
+                                >
+                                    <UndoIcon className="w-3.5 h-3.5" />
+                                    <span>Original</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={onEcoSwitch}
+                                    disabled={isModifying}
+                                    className="flex items-center justify-center gap-2 bg-eco hover:bg-eco/90 active:scale-95 text-gray-900 font-bold py-2 px-4 rounded-lg transition-all h-[40px] text-xs shadow-md touch-manipulation disabled:opacity-50 disabled:active:scale-100"
+                                    title="Switch to eco version"
+                                >
+                                    <LeafIcon className="w-4 h-4 text-gray-900 animate-pulse" />
+                                    <span>eco version</span>
+                                </button>
+                            )
+                        )}
+                    </div>
+                    <ActionButtons 
+                        onModify={onModify} 
+                        disabled={isModifying}
+                    />
                 </div>
             )}
 

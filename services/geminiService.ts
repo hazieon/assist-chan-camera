@@ -153,11 +153,17 @@ export const modifyInstructions = async (
     instructions: InstructionSet,
     modificationPrompt: string
 ): Promise<InstructionSet> => {
-    const prompt = `Update the following instruction set JSON based on this request: "${modificationPrompt}".
-    CRITICAL RULE: In the "steps" array, you MUST repeat the specific quantities and amounts for each ingredient inside the text of the step.
-    LANGUAGE RULE: If the user asks to change the language (e.g., "Translate to Spanish"), fulfill that request and update the "language" field to the new BCP-47 tag. Otherwise, maintain the original language (${instructions.language || 'en-US'}).
-    JSON: ${JSON.stringify(instructions)}.
-    Return ONLY JSON.`;
+    const prompt = `You are a JSON transformation engine. Update the following instruction set JSON based on this request: "${modificationPrompt}".
+    
+    CRITICAL RULES:
+    1. Return the ENTIRE JSON object, not just the changes.
+    2. In the "steps" array, you MUST repeat the specific quantities and amounts for each ingredient inside the text of the step (e.g., "Add 2 cups of flour" instead of just "Add flour").
+    3. LANGUAGE RULE: If the user asks to change the language, fulfill that request and update the "language" field. Otherwise, maintain the original language (${instructions.language || 'en-US'}).
+    4. Ensure the JSON is valid and matches the original structure.
+    
+    ORIGINAL JSON: ${JSON.stringify(instructions)}.
+    
+    Return ONLY the updated JSON object.`;
 
     try {
         const response = await ai.models.generateContent({

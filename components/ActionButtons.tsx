@@ -6,12 +6,12 @@ interface ActionButtonsProps {
     disabled: boolean;
 }
 
-const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; children: React.ReactNode }> = ({ onClick, disabled, children }) => (
+const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; children: React.ReactNode; className?: string }> = ({ onClick, disabled, children, className }) => (
     <button
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="flex-1 bg-primary text-text-primary font-semibold py-3 px-4 rounded-lg hover:bg-accent hover:text-white active:scale-95 transition-all disabled:bg-opacity-50 disabled:text-text-secondary disabled:cursor-not-allowed disabled:active:scale-100 text-sm border border-gray-300 dark:border-transparent shadow-md dark:shadow-none touch-manipulation"
+        className={`font-semibold py-3 px-4 rounded-lg active:scale-95 transition-all disabled:bg-opacity-50 disabled:text-text-secondary disabled:cursor-not-allowed disabled:active:scale-100 text-sm border border-gray-300 dark:border-transparent shadow-md dark:shadow-none touch-manipulation ${className || 'bg-primary text-text-primary hover:bg-accent hover:text-white flex-1'}`}
     >
         {children}
     </button>
@@ -35,10 +35,13 @@ const actionGroups = [
     }
 ];
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({ onModify, disabled }) => {
+const ActionButtons: React.FC<ActionButtonsProps> = ({ 
+    onModify, 
+    disabled
+}) => {
     return (
-        <div className="bg-secondary p-4 rounded-lg shadow-lg animate-fade-in border border-gray-300 dark:border-transparent">
-            <div className="flex flex-col md:flex-row gap-8">
+        <div className="bg-secondary p-4 rounded-lg shadow-lg animate-fade-in border border-gray-300 dark:border-transparent space-y-6">
+            <div className="flex flex-col lg:flex-row gap-8">
                 {actionGroups.map((group) => (
                     <div key={group.title} className="flex-1">
                         <h4 className="text-md font-semibold mb-3 text-text-secondary">{group.title}</h4>
