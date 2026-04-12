@@ -24,7 +24,7 @@ const ChatMessage: React.FC<{
             )}
             
             <div className={`relative max-w-[85%] md:max-w-lg p-3 md:p-4 rounded-2xl transition-all group border border-gray-300 dark:border-transparent shadow-md dark:shadow-sm ${
-                isAssistant ? 'bg-secondary rounded-tl-none' : 'bg-accent rounded-tr-none'
+                isAssistant ? 'bg-secondary rounded-tl-none text-text-primary' : 'bg-accent rounded-tr-none text-white'
             }`}>
                 {message.image && (
                     <div className="mb-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
