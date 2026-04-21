@@ -11,6 +11,8 @@ import { BotIcon } from './components/icons/BotIcon';
 import { SpeakerIcon } from './components/icons/SpeakerIcon';
 import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
 import { MicIcon } from './components/icons/MicIcon';
+import { ChevronDownIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const App: React.FC = () => {
     const logTime = useCallback((label: string, startTime: number) => {
@@ -33,6 +35,7 @@ const App: React.FC = () => {
     const [isAnswering, setIsAnswering] = useState<boolean>(false);
     const [isModifying, setIsModifying] = useState<boolean>(false);
     const [isEcoApplied, setIsEcoApplied] = useState<boolean>(false);
+    const [isChatOpen, setIsChatOpen] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
     const [loadingText, setLoadingText] = useState<string>("gathering seasonings");
@@ -137,6 +140,19 @@ const App: React.FC = () => {
     }, []);
 
     const [isMuted, setIsMuted] = useState<boolean>(false);
+    
+    // Global mute handler
+    const toggleMute = useCallback(() => {
+        const newMute = !isMuted;
+        setIsMuted(newMute);
+        if (newMute && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            setIsReadingMaterials(false);
+            setReadingStatus('idle');
+        }
+    }, [isMuted]);
+
     const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
     const [isContinuousListening, setIsContinuousListening] = useState<boolean>(false);
     const [isReadingMaterials, setIsReadingMaterials] = useState<boolean>(false);
@@ -160,6 +176,7 @@ const App: React.FC = () => {
 
     const stopReadingRef = useRef(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const resumeIntervalRef = useRef<any>(null);
     const recognitionRef = useRef<any>(null);
     const recognitionStateRef = useRef<'IDLE' | 'STARTING' | 'STARTED' | 'STOPPING'>('IDLE');
     const restartTimeoutRef = useRef<any>(null);
@@ -186,6 +203,14 @@ const App: React.FC = () => {
                 setMicPermissionState(result.state as any);
                 result.onchange = () => setMicPermissionState(result.state as any);
             }).catch(() => {});
+        }
+
+        // Trigger voice loading for Chrome
+        if (window.speechSynthesis) {
+            window.speechSynthesis.getVoices();
+            const handleVoicesChanged = () => window.speechSynthesis.getVoices();
+            window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+            return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
         }
     }, []);
 
@@ -261,7 +286,8 @@ const App: React.FC = () => {
         if (!window.speechSynthesis) return;
         
         if (!hasPrimed) {
-            const utterance = new SpeechSynthesisUtterance('');
+            // Speak a short silent utterance to "wake up" the audio context
+            const utterance = new SpeechSynthesisUtterance(' ');
             utterance.volume = 0;
             window.speechSynthesis.speak(utterance);
             setHasPrimed(true);
@@ -291,11 +317,18 @@ const App: React.FC = () => {
             onEnd?.();
             return;
         }
+
+        // Clear any existing resume interval
+        if (resumeIntervalRef.current) {
+            clearInterval(resumeIntervalRef.current);
+            resumeIntervalRef.current = null;
+        }
+
         const startTime = performance.now();
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
         
-        const safeText = String(text).replace(/[*#]/g, '');
+        const safeText = ' . . ' + String(text).replace(/[*#]/g, '');
         const utterance = new SpeechSynthesisUtterance(safeText);
         utterance.rate = 1.0;
         
@@ -313,19 +346,44 @@ const App: React.FC = () => {
         utterance.onstart = () => {
             setIsSpeaking(true);
             logTime('TTS_READ_ALOUD_START', startTime);
+
+            // Chrome bug workaround: speech stops after ~15s
+            // Periodically calling resume() keeps it going
+            if (resumeIntervalRef.current) clearInterval(resumeIntervalRef.current);
+            resumeIntervalRef.current = setInterval(() => {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.pause();
+                    window.speechSynthesis.resume();
+                }
+            }, 10000);
         };
-        utterance.onend = () => {
+
+        const cleanup = () => {
             setIsSpeaking(false);
             utteranceRef.current = null;
-            onEnd?.();
-        };
-        utterance.onerror = () => {
-            setIsSpeaking(false);
-            utteranceRef.current = null;
+            if (resumeIntervalRef.current) {
+                clearInterval(resumeIntervalRef.current);
+                resumeIntervalRef.current = null;
+            }
             onEnd?.();
         };
 
-        window.speechSynthesis.speak(utterance);
+        utterance.onend = cleanup;
+        utterance.onerror = cleanup;
+
+        // Small delay before speaking to prevent cut-off in some browsers
+        // Increased delay to 350ms and added a "warm-up" silent utterance
+        setTimeout(() => {
+            if (!isMutedRef.current) {
+                // Warm up the engine with a silent utterance if it's the first time or after a cancel
+                const warmUp = new SpeechSynthesisUtterance(' ');
+                warmUp.volume = 0;
+                window.speechSynthesis.speak(warmUp);
+                
+                // Speak the actual content
+                window.speechSynthesis.speak(utterance);
+            }
+        }, 350);
     }, [instructionSet, getLangTag, logTime]);
 
     const toggleMessageSpeech = useCallback((index: number, text: string, lang?: string) => {
@@ -363,6 +421,7 @@ const App: React.FC = () => {
 
         try {
             const data = await getInstructions(input, imageData);
+            console.log("Recipe JSON Data:", data);
             logTime('FETCH_RECIPE_RESPONSE', startTime);
             
             const isError = data.title.toLowerCase().includes('error') || (data.steps || []).length === 0;
@@ -479,8 +538,12 @@ const App: React.FC = () => {
         
         speak(textToSpeak, () => {
             if (!stopReadingRef.current) {
-                setReadingStatus('paused');
-                // We no longer auto-increment, waiting for user input
+                // Auto-increment to next step with a small natural pause
+                setTimeout(() => {
+                    if (!stopReadingRef.current) {
+                        handleReadInstructions(index + 1);
+                    }
+                }, 1000);
             }
         }, lang);
     }, [instructionSet, completedSteps, isMuted, speak, getLangTag, readingStatus, currentReadingStep, isCookingMode]);
@@ -502,9 +565,10 @@ const App: React.FC = () => {
             }
 
             const text = instructionSet.materials[index];
+            // Ensure we read the full material text (quantity + name)
             speak(text, () => {
                 if (!stopReadingRef.current) {
-                    setTimeout(() => readMaterial(index + 1), 600);
+                    setTimeout(() => readMaterial(index + 1), 800);
                 }
             }, lang);
         };
@@ -515,6 +579,10 @@ const App: React.FC = () => {
     const handleStopReading = useCallback(() => {
         stopReadingRef.current = true;
         window.speechSynthesis.cancel();
+        if (resumeIntervalRef.current) {
+            clearInterval(resumeIntervalRef.current);
+            resumeIntervalRef.current = null;
+        }
         setIsSpeaking(false);
         setIsReadingMaterials(false);
         setReadingStatus('idle');
@@ -574,6 +642,7 @@ const App: React.FC = () => {
             }
 
             const updated = await modifyInstructions(instructionSet, prompt);
+            console.log("Updated Recipe JSON Data:", updated);
             logTime('ALTERATION_RESPONSE', startTime);
             if (isEcoSwitch) {
                 setIsEcoApplied(true);
@@ -584,8 +653,9 @@ const App: React.FC = () => {
             setCompletedSteps(new Array((updated.steps || []).length).fill(false));
             
             const updatedLang = getLangTag(updated.language);
-            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: "Instructions updated successfully.", language: updatedLang }]);
-            speak("Updated.", undefined, updatedLang);
+            const confirmationText = isEcoSwitch ? "Eco-friendly version applied. Instructions updated." : "Instructions updated successfully.";
+            setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: confirmationText, language: updatedLang }]);
+            speak(confirmationText, undefined, updatedLang);
         } catch (e) {
             safeSetError("Update failed.");
         } finally {
@@ -640,15 +710,18 @@ const App: React.FC = () => {
 
         const lowerMsg = message.toLowerCase().trim().replace(/[.,?!]/g, '');
         
-        // Voice Commands - More robust matching
-        const isNext = /\b(next|next step|forward|go next)\b/.test(lowerMsg);
-        const isBack = /\b(go back|previous|back|previous step|go bacl)\b/.test(lowerMsg);
-        const isStop = /\b(stop|pause|wait|hold on|hush|quiet)\b/.test(lowerMsg);
-        const isContinue = /\b(continue|resume|go on|keep going)\b/.test(lowerMsg);
-        const isReadMaterials = /\b(read materials|ingredients|what do i need)\b/.test(lowerMsg);
-        const isReadSteps = /\b(read steps|read instructions|start reading)\b/.test(lowerMsg);
-        const isExit = /\b(exit|close|quit|stop cooking)\b/.test(lowerMsg);
-        const isRestart = /\b(restart|start over|from the beginning)\b/.test(lowerMsg);
+        // Voice Commands - More robust matching. Only trigger if it's a direct command to read.
+        // We avoid simple keywords like "ingredients" blocking full sentences like "add chocolate to ingredients"
+        const isNext = /^(next|next step|forward|go next)$/.test(lowerMsg);
+        const isBack = /^(go back|previous|back|previous step|go bacl)$/.test(lowerMsg);
+        const isStop = /^(stop|pause|wait|hold on|hush|quiet)$/.test(lowerMsg);
+        const isContinue = /^(continue|resume|go on|keep going)$/.test(lowerMsg);
+        const isReadMaterials = /^(read materials|ingredients|materials|what do i need)$/.test(lowerMsg) || 
+                                /^(read|list|tell|tell me) (the )?ingredients$/.test(lowerMsg);
+        const isReadSteps = /^(read steps|read instructions|start reading|steps)$/.test(lowerMsg) ||
+                            /^(read|list|tell|tell me) (the )?steps$/.test(lowerMsg);
+        const isExit = /^(exit|close|quit|stop cooking)$/.test(lowerMsg);
+        const isRestart = /^(restart|start over|from the beginning)$/.test(lowerMsg);
 
         // If we are answering, only allow stop/pause to interrupt
         if (isAnswering && !isStop) return;
@@ -1099,7 +1172,7 @@ const App: React.FC = () => {
                                 <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping" />
                             )}
                         </button>
-                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-primary/50 hover:bg-primary active:scale-95 transition-all touch-manipulation">
+                        <button onClick={toggleMute} className="p-2 rounded-full bg-primary/50 hover:bg-primary active:scale-95 transition-all touch-manipulation">
                             {isMuted ? <SpeakerMuteIcon className="w-5 h-5 text-gray-500" /> : <SpeakerIcon className="w-5 h-5 text-accent" />}
                         </button>
                     </div>
@@ -1205,22 +1278,41 @@ const App: React.FC = () => {
                 
                 {instructionSet && !isLoading && (
                     <div className="bg-secondary p-4 sm:p-6 rounded-xl shadow-inner border border-gray-300 dark:border-transparent">
-                        <ChatInterface
-                            chatHistory={chatHistory}
-                            onSendMessage={handleSendMessage}
-                            isAnswering={isAnswering || isModifying}
-                            isCookingMode={isCookingMode}
-                            isContinuousListening={isContinuousListening}
-                            onToggleListening={handleToggleListening}
-                            isMuted={isMuted}
-                            speakingMessageIndex={speakingMessageIndex}
-                            onToggleMessageSpeech={toggleMessageSpeech}
-                            pendingMod={pendingMod}
-                            onConfirmMod={handleConfirmModification}
-                            onCancelMod={handleCancelModification}
-                            targetLang={instructionSet?.language}
-                            suggestions={suggestions}
-                        />
+                        <button 
+                            onClick={() => setIsChatOpen(!isChatOpen)}
+                            className="flex items-center justify-between w-full mb-3 group cursor-pointer"
+                        >
+                            <h3 className="text-xl sm:text-2xl font-black text-text-primary uppercase tracking-tight">Chat Assistant</h3>
+                            <ChevronDownIcon className={`w-5 h-5 text-accent/50 group-hover:text-accent transition-transform duration-300 ${isChatOpen ? '' : '-rotate-90'}`} />
+                        </button>
+                        <AnimatePresence>
+                            {isChatOpen && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                    className="overflow-hidden"
+                                >
+                                    <ChatInterface
+                                        chatHistory={chatHistory}
+                                        onSendMessage={handleSendMessage}
+                                        isAnswering={isAnswering || isModifying}
+                                        isCookingMode={isCookingMode}
+                                        isContinuousListening={isContinuousListening}
+                                        onToggleListening={handleToggleListening}
+                                        isMuted={isMuted}
+                                        speakingMessageIndex={speakingMessageIndex}
+                                        onToggleMessageSpeech={toggleMessageSpeech}
+                                        pendingMod={pendingMod}
+                                        onConfirmMod={handleConfirmModification}
+                                        onCancelMod={handleCancelModification}
+                                        targetLang={instructionSet?.language}
+                                        suggestions={suggestions}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 )}
             </main>

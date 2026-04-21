@@ -82,9 +82,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex flex-col h-[65vh] md:h-[50vh] min-h-[400px]">
             <div className="flex items-center justify-between mb-4 px-1">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-text-primary uppercase tracking-tighter flex items-center gap-3">
-                        <span className="text-accent">CHAT</span> ASSISTANT
-                    </h3>
                     <p className="text-xs sm:text-sm text-text-secondary mt-1">Ask for adjustments, dietary swaps, or other questions</p>
                 </div>
                 <div className="flex gap-1">

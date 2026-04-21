@@ -75,6 +75,7 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             if (isUrl) {
                 tools.push({ urlContext: {} });
             } else {
+                // Reverting to googleSearch as per API error feedback
                 tools.push({ googleSearch: {} });
             }
         }
@@ -83,7 +84,7 @@ export const getInstructions = async (input: string, imageData?: { data: string,
             model: FAST_MODEL,
             contents: contents,
             config: {
-                systemInstruction: "You are a helpful assistant. Always respond in the detected language of the source material. Ensure the 'welcomeMessage' is translated naturally into that language.",
+                systemInstruction: "You are a professional recipe and instruction assistant. For keyword searches, you MUST use the googleSearch tool to find real-world sources. You MUST base your response on the search results and provide grounding metadata so that sources can be linked. Always respond in the detected language.",
                 tools: tools.length > 0 ? tools : undefined,
                 responseMimeType: "application/json"
             },
@@ -105,17 +106,33 @@ export const getInstructions = async (input: string, imageData?: { data: string,
         }
         
         if (!imageData) {
-            const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-            const sources = chunks
-                ? chunks.map(c => c.web).filter(w => w?.uri).map(w => ({ uri: w!.uri, title: w!.title || 'Source' }))
+            const candidate = response.candidates?.[0];
+            const groundingMetadata = candidate?.groundingMetadata;
+            const chunks = groundingMetadata?.groundingChunks;
+            
+            let sources = chunks
+                ? chunks.map((c: any) => c.web).filter((w: any) => w?.uri).map((w: any) => ({ uri: w!.uri, title: w!.title || 'Source' }))
                 : [];
 
+            // Fallback: Check for searchEntryPoint or other metadata if chunks are missing
+            if (sources.length === 0 && (groundingMetadata as any)?.searchEntryPoint?.htmlContent) {
+                // If we have an entry point but no chunks, the model might have grounded but not provided specific chunks
+                // This is less common in JSON mode but possible
+                console.log("Grounding metadata found but no chunks present.");
+            }
+
             if (isUrl) {
-                const alreadyIncluded = sources.find(s => s.uri === input);
+                const alreadyIncluded = sources.find((s: any) => s.uri === input);
                 if (!alreadyIncluded) {
                     sources.unshift({ uri: input, title: parsed.title || 'Original Source' });
                 }
             }
+            
+            // Ensure we have at least one source if it's a URL
+            if (isUrl && sources.length === 0) {
+                sources = [{ uri: input, title: parsed.title || 'Original Source' }];
+            }
+
             parsed.sources = sources;
         }
         
@@ -174,7 +191,12 @@ export const modifyInstructions = async (
 
         const text = response.text?.trim() || "{}";
         const parsed = JSON.parse(text) as InstructionSet;
-        parsed.sources = instructions.sources;
+        
+        // Always preserve original sources if they exist
+        if (instructions.sources) {
+            parsed.sources = instructions.sources;
+        }
+        
         return parsed;
     } catch (error) {
         throw new Error("Could not update the instructions.");
