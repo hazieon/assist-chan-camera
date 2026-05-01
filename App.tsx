@@ -7,6 +7,7 @@ import ChatInterface from './components/ChatInterface';
 import InstructionDisplay from './components/RecipeDisplay';
 import ActionButtons from './components/ActionButtons';
 import CookingMode from './components/CookingMode';
+import { ToastContainer, ToastType } from './components/Toast';
 import { BotIcon } from './components/icons/BotIcon';
 import { SpeakerIcon } from './components/icons/SpeakerIcon';
 import { SpeakerMuteIcon } from './components/icons/SpeakerMuteIcon';
@@ -40,6 +41,21 @@ const App: React.FC = () => {
     const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
     const [loadingText, setLoadingText] = useState<string>("gathering seasonings");
     const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+    const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+
+    const addToast = useCallback((message: string, type: ToastType = 'info') => {
+        const id = Math.random().toString(36).substring(2, 9);
+        setToasts(prev => [...prev, { id, message, type }]);
+        return id;
+    }, []);
+
+    const removeToast = useCallback((id: string) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    const updateToast = useCallback((id: string, message: string, type: ToastType) => {
+        setToasts(prev => prev.map(t => t.id === id ? { ...t, message, type } : t));
+    }, []);
 
     const loadingPhrases = [
         "gathering seasonings",
@@ -419,6 +435,8 @@ const App: React.FC = () => {
         const isUrl = input.trim().toLowerCase().startsWith('http');
         setIsKeywordSearch(!isUrl && !imageData);
 
+        const toastId = addToast("Gathering seasonings...", "loading");
+
         try {
             const data = await getInstructions(input, imageData);
             console.log("Recipe JSON Data:", data);
@@ -441,14 +459,16 @@ const App: React.FC = () => {
             
             setChatHistory([{ role: Role.ASSISTANT, content: welcomeMsg, language: lang }]);
             speak(welcomeMsg, undefined, lang);
+            updateToast(toastId, "Bon appétit!", "success");
         } catch (e: any) {
             const errorMsg = "I couldn't find those instructions. Please check the input is correct.";
             safeSetError(e);
             speak(errorMsg);
+            updateToast(toastId, "Fetch failed", "error");
         } finally {
             setIsLoading(false);
         }
-    }, [speak, primeSpeech, getLangTag, safeSetError, logTime]);
+    }, [speak, primeSpeech, getLangTag, safeSetError, logTime, addToast, updateToast]);
 
     const handleRegenerate = useCallback(() => {
         if (lastSearchInput) {
@@ -635,6 +655,7 @@ const App: React.FC = () => {
         
         handleStopReading();
         setPendingMod(null);
+        const toastId = addToast("Cooking up changes...", "loading");
 
         try {
             if (isEcoSwitch && !originalInstructionSet) {
@@ -656,12 +677,14 @@ const App: React.FC = () => {
             const confirmationText = isEcoSwitch ? "Eco-friendly version applied. Instructions updated." : "Instructions updated successfully.";
             setChatHistory(prev => [...prev, { role: Role.ASSISTANT, content: confirmationText, language: updatedLang }]);
             speak(confirmationText, undefined, updatedLang);
+            updateToast(toastId, isEcoSwitch ? "Eco-mode applied!" : "Changes applied!", "success");
         } catch (e) {
             safeSetError("Update failed.");
+            updateToast(toastId, "Update failed", "error");
         } finally {
             setIsModifying(false);
         }
-    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading, getLangTag, logTime]);
+    }, [instructionSet, originalInstructionSet, speak, primeSpeech, handleStopReading, getLangTag, logTime, addToast, updateToast]);
 
     const handleConfirmModification = useCallback(() => {
         if (pendingMod) handleModifyInstructions(pendingMod.prompt, pendingMod.prompt.includes("VEGAN"));
@@ -1359,6 +1382,8 @@ const App: React.FC = () => {
             {tutorialStep !== null && (
                 <TutorialOverlay step={tutorialStep} onNext={nextTutorialStep} />
             )}
+
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
 
             <style>{`
                 @keyframes float {
